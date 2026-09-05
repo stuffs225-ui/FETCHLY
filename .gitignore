@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Backend runtime data (never commit real customer data or uploaded files)
+server/data/
+server/uploads/
+.env
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
