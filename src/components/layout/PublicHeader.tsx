@@ -42,7 +42,7 @@ export default function PublicHeader() {
             <NavLink
               key={link.to}
               to={link.to}
-              className={({ isActive }) => cn('text-sm font-medium transition-colors hover:text-text', isActive ? 'text-gold' : 'text-text-muted')}
+              className={({ isActive }) => cn('text-sm font-medium transition-colors hover:text-text', isActive ? 'text-primary' : 'text-text-muted')}
             >
               {link.label}
             </NavLink>
@@ -73,7 +73,7 @@ export default function PublicHeader() {
         <div className="overflow-hidden">
           <div className="flex flex-col gap-1 px-6 py-4">
             {navLinks.map((link) => (
-              <Link key={link.to} to={link.to} onClick={() => setOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-text-muted hover:bg-white/5 hover:text-text">
+              <Link key={link.to} to={link.to} onClick={() => setOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-text-muted hover:bg-black/5 hover:text-text">
                 {link.label}
               </Link>
             ))}

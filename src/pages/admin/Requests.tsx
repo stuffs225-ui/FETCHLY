@@ -40,7 +40,7 @@ export default function Requests() {
     { key: 'quantity', header: 'الكمية' },
     { key: 'email', header: 'البريد الإلكتروني', className: 'max-w-[160px] truncate' },
     { key: 'phone', header: 'الجوال' },
-    { key: 'city', header: 'المدينة' },
+    { key: 'deliveryCity', header: 'مدينة التسليم', render: (r) => r.deliveryCity ?? '—' },
     { key: 'status', header: 'الحالة', render: (r) => <StatusBadge status={r.status} />, sortValue: (r) => r.status },
     { key: 'createdAt', header: 'التاريخ', render: (r) => formatDate(r.createdAt), sortValue: (r) => r.createdAt },
   ]

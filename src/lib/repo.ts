@@ -99,38 +99,12 @@ export const savedTermsRepo = createCollection<SavedTerm>('saved_terms', () => [
 // Sourcing cases (public homepage CMS)
 // ---------------------------------------------------------------------------
 
-export const casesRepo = createCollection<SourcingCase>('cases', () => [
-  {
-    id: uid('case'),
-    titleAr: 'زيت متخصص',
-    titleEn: 'Specialty Oil',
-    sourceAr: 'الولايات المتحدة',
-    sourceEn: 'United States',
-    challengeAr: 'غير متوفر محليًا',
-    challengeEn: 'Not available locally',
-    solutionAr: 'تم تحديد مصدر مناسب وتقديم عرض توريد',
-    solutionEn: 'A suitable source was identified and a supply quotation prepared',
-    published: true,
-  },
-  {
-    id: uid('case'),
-    titleAr: 'قطعة صناعية محددة',
-    titleEn: 'Specific Industrial Part',
-    sourceAr: 'المملكة المتحدة',
-    sourceEn: 'United Kingdom',
-    challengeAr: 'Part Number محدد',
-    challengeEn: 'Specific part number',
-    published: true,
-  },
-  {
-    id: uid('case'),
-    titleAr: 'جهاز متخصص',
-    titleEn: 'Specialized Device',
-    sourceAr: 'أوروبا',
-    sourceEn: 'Europe',
-    published: true,
-  },
-])
+/**
+ * No illustrative/fictional cases are seeded. The public homepage section
+ * that reads from this repo stays hidden until an admin adds a real,
+ * completed sourcing case.
+ */
+export const casesRepo = createCollection<SourcingCase>('cases', () => [])
 
 // ---------------------------------------------------------------------------
 // FAQ overrides (falls back to i18n defaults on the public site when empty)
@@ -155,23 +129,29 @@ export const credentialsRepo = createCollection<Credential>('credentials', () =>
 // Company settings
 // ---------------------------------------------------------------------------
 
+/**
+ * Every field here defaults to an empty string rather than a bracket
+ * placeholder. Public-facing components (footer, trust bar, trust page)
+ * only render a field when it is actually filled in from Admin → Company
+ * Settings — never a fabricated or placeholder-looking value.
+ */
 export const companySettingsStore = createSingleton<CompanySettings>('company_settings', {
-  companyNameAr: '[اسم الشركة]',
-  companyNameEn: '[COMPANY_NAME_EN]',
+  companyNameAr: '',
+  companyNameEn: '',
   logoDataUrl: undefined,
   logoArDataUrl: undefined,
-  crNumber: '[CR_NUMBER]',
-  vatNumber: '[VAT_NUMBER]',
-  zakatCertificate: '[ZAKAT_CERTIFICATE]',
-  sbcNumber: '[SAUDI_BUSINESS_CENTER_NUMBER]',
-  nationalAddress: '[NATIONAL_ADDRESS]',
-  baladyLicense: '[BALADY_LICENSE]',
-  phone: '[PHONE]',
-  whatsapp: '[WHATSAPP]',
-  businessEmail: '[BUSINESS_EMAIL]',
-  quotationEmail: '[BUSINESS_EMAIL]',
-  websiteDomain: 'example.com',
-  address: '[NATIONAL_ADDRESS]',
+  crNumber: '',
+  vatNumber: '',
+  zakatCertificate: '',
+  sbcNumber: '',
+  nationalAddress: '',
+  baladyLicense: '',
+  phone: '',
+  whatsapp: '',
+  businessEmail: '',
+  quotationEmail: '',
+  websiteDomain: '',
+  address: '',
   footerText: '',
   defaultVatRate: 15,
   defaultCurrency: 'SAR',
@@ -182,10 +162,10 @@ export const companySettingsStore = createSingleton<CompanySettings>('company_se
 // ---------------------------------------------------------------------------
 
 export const emailSettingsStore = createSingleton<EmailSettings>('email_settings', {
-  senderName: '[COMPANY_NAME_AR]',
-  senderEmail: '[BUSINESS_EMAIL]',
-  internalNotificationEmails: '[BUSINESS_EMAIL]',
-  replyToEmail: '[BUSINESS_EMAIL]',
+  senderName: '',
+  senderEmail: '',
+  internalNotificationEmails: '',
+  replyToEmail: '',
   ackTemplateAr: {
     subject: 'تم استلام طلبك — {{requestNumber}}',
     body: 'مرحبًا {{name}}،\n\nتم استلام طلبك بنجاح.\n\nرقم الطلب: {{requestNumber}}\n\nسنقوم بمراجعة التفاصيل وإرسال عرض السعر إلى بريدك الإلكتروني بعد استكمال عملية التسعير.\n\nشكرًا لك.',
@@ -240,5 +220,5 @@ export const contentOverridesStore = createSingleton<ContentOverrides>('content_
 // ---------------------------------------------------------------------------
 
 export const adminUsersRepo = createCollection<AdminUser>('admin_users', () => [
-  { id: uid('user'), name: 'المشرف الرئيسي', email: '[BUSINESS_EMAIL]', role: 'admin' },
+  { id: uid('user'), name: 'المشرف الرئيسي', email: '', role: 'admin' },
 ])

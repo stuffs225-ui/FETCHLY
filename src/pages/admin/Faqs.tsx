@@ -56,7 +56,7 @@ export default function Faqs() {
               <p className="font-bold text-text">{f.qAr}</p>
               <div className="flex items-center gap-2">
                 <label className="flex items-center gap-1.5 text-xs text-text-muted">
-                  <input type="checkbox" checked={f.published} onChange={(e) => faqsRepo.upsert({ ...f, published: e.target.checked })} className="h-3.5 w-3.5 accent-gold" />
+                  <input type="checkbox" checked={f.published} onChange={(e) => faqsRepo.upsert({ ...f, published: e.target.checked })} className="h-3.5 w-3.5 accent-primary" />
                   منشور
                 </label>
                 <button onClick={() => faqsRepo.remove(f.id)} className="text-text-muted hover:text-danger">
@@ -65,7 +65,7 @@ export default function Faqs() {
               </div>
             </div>
             <p className="mt-1.5 text-sm text-text-muted">{f.aAr}</p>
-            <button onClick={() => setDraft(f)} className="mt-2 text-xs font-semibold text-gold hover:underline">تعديل</button>
+            <button onClick={() => setDraft(f)} className="mt-2 text-xs font-semibold text-primary hover:underline">تعديل</button>
           </Card>
         ))}
         {items.length === 0 && <p className="text-sm text-text-muted">لا توجد أسئلة مخصصة — يتم عرض الأسئلة الافتراضية.</p>}

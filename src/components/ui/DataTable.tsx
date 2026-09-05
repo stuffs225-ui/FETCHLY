@@ -68,8 +68,8 @@ export function DataTable<T>({ columns, data, rowKey, onRowClick, pageSize = 10,
                     <button className="inline-flex items-center gap-1 hover:text-text" onClick={() => toggleSort(col.key)}>
                       {col.header}
                       <span className="flex flex-col -space-y-1 opacity-70">
-                        <PrevIcon className={cn('h-3 w-3', sortKey === col.key && sortDir === 'asc' && 'text-gold')} />
-                        <ChevronDown className={cn('h-3 w-3', sortKey === col.key && sortDir === 'desc' && 'text-gold')} />
+                        <PrevIcon className={cn('h-3 w-3', sortKey === col.key && sortDir === 'asc' && 'text-primary')} />
+                        <ChevronDown className={cn('h-3 w-3', sortKey === col.key && sortDir === 'desc' && 'text-primary')} />
                       </span>
                     </button>
                   ) : (
@@ -84,7 +84,7 @@ export function DataTable<T>({ columns, data, rowKey, onRowClick, pageSize = 10,
               <tr
                 key={rowKey(row)}
                 onClick={() => onRowClick?.(row)}
-                className={cn('border-b border-border last:border-0 transition-colors hover:bg-white/[0.03]', onRowClick && 'cursor-pointer')}
+                className={cn('border-b border-border last:border-0 transition-colors hover:bg-black/[0.02]', onRowClick && 'cursor-pointer')}
               >
                 {columns.map((col) => (
                   <td key={col.key} className={cn('px-4 py-3.5 text-text', col.className)}>
@@ -111,7 +111,7 @@ export function DataTable<T>({ columns, data, rowKey, onRowClick, pageSize = 10,
           <button
             disabled={page === 0}
             onClick={() => setPage((p) => Math.max(0, p - 1))}
-            className="flex h-7 w-7 items-center justify-center rounded-md border border-border-light disabled:opacity-30 hover:not-disabled:bg-white/5"
+            className="flex h-7 w-7 items-center justify-center rounded-md border border-border-light disabled:opacity-30 hover:not-disabled:bg-black/5"
           >
             <DirArrow className="h-3.5 w-3.5 rotate-180" />
           </button>
@@ -119,7 +119,7 @@ export function DataTable<T>({ columns, data, rowKey, onRowClick, pageSize = 10,
           <button
             disabled={page >= totalPages - 1}
             onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-            className="flex h-7 w-7 items-center justify-center rounded-md border border-border-light disabled:opacity-30 hover:not-disabled:bg-white/5"
+            className="flex h-7 w-7 items-center justify-center rounded-md border border-border-light disabled:opacity-30 hover:not-disabled:bg-black/5"
           >
             <DirArrow className="h-3.5 w-3.5" />
           </button>

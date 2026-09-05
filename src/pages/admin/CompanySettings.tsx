@@ -38,7 +38,7 @@ export default function CompanySettingsPage() {
   return (
     <div className="max-w-4xl space-y-6">
       <Card className="p-6">
-        <h3 className="text-sm font-bold text-gold">الشعار واسم الشركة</h3>
+        <h3 className="text-sm font-bold text-primary">الشعار واسم الشركة</h3>
         <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div>
             <FieldLabel>اسم الشركة (عربي)</FieldLabel>
@@ -72,8 +72,8 @@ export default function CompanySettingsPage() {
       </Card>
 
       <Card className="p-6">
-        <h3 className="text-sm font-bold text-gold">البيانات النظامية</h3>
-        <p className="mt-1 text-xs text-text-muted">استبدل القيم بين الأقواس [ ] ببياناتك الفعلية قبل الإطلاق الفعلي للموقع.</p>
+        <h3 className="text-sm font-bold text-primary">البيانات النظامية</h3>
+        <p className="mt-1 text-xs text-text-muted">لن تظهر أي من هذه البيانات في الموقع العام إلا بعد تعبئتها هنا.</p>
         <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div><FieldLabel>رقم السجل التجاري</FieldLabel><Input value={settings.crNumber} onChange={(e) => update('crNumber', e.target.value)} dir="ltr" /></div>
           <div><FieldLabel>الرقم الضريبي (VAT)</FieldLabel><Input value={settings.vatNumber} onChange={(e) => update('vatNumber', e.target.value)} dir="ltr" /></div>
@@ -85,7 +85,7 @@ export default function CompanySettingsPage() {
       </Card>
 
       <Card className="p-6">
-        <h3 className="text-sm font-bold text-gold">التواصل</h3>
+        <h3 className="text-sm font-bold text-primary">التواصل</h3>
         <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div><FieldLabel>الهاتف</FieldLabel><Input value={settings.phone} onChange={(e) => update('phone', e.target.value)} dir="ltr" /></div>
           <div><FieldLabel>واتساب (مع رمز الدولة)</FieldLabel><Input value={settings.whatsapp} onChange={(e) => update('whatsapp', e.target.value)} dir="ltr" placeholder="+9665XXXXXXXX" /></div>
@@ -101,7 +101,7 @@ export default function CompanySettingsPage() {
       </Card>
 
       <Card className="p-6">
-        <h3 className="text-sm font-bold text-gold">إعدادات التسعير الافتراضية</h3>
+        <h3 className="text-sm font-bold text-primary">إعدادات التسعير الافتراضية</h3>
         <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div>
             <FieldLabel>نسبة ضريبة القيمة المضافة الافتراضية %</FieldLabel>

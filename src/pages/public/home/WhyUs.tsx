@@ -15,9 +15,9 @@ export default function WhyUs() {
           {t.whyUs.items.map((item, i) => {
             const Icon = icons[i % icons.length]
             return (
-              <div key={item.title} className="flex items-start gap-4 rounded-2xl border border-border bg-card p-6 transition-colors hover:border-gold/40">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gold/10">
-                  <Icon className="h-5 w-5 text-gold" />
+              <div key={item.title} className="flex items-start gap-4 rounded-2xl border border-border bg-card p-6 transition-colors hover:border-primary/40">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                  <Icon className="h-5 w-5 text-primary" />
                 </div>
                 <div>
                   <p className="font-bold text-text">{item.title}</p>

@@ -32,7 +32,7 @@ export default function Contact() {
   return (
     <section className="py-20">
       <div className="mx-auto max-w-3xl px-6 text-center lg:px-8">
-        <span className="text-xs font-semibold uppercase tracking-[0.15em] text-gold">{t.contactPage.hero.eyebrow}</span>
+        <span className="text-xs font-semibold uppercase tracking-[0.15em] text-primary">{t.contactPage.hero.eyebrow}</span>
         <h1 className="mt-3 text-4xl font-extrabold tracking-tight text-text sm:text-5xl">{t.contactPage.hero.title}</h1>
         <div className="mt-8">
           <Button to="/request" size="lg">
@@ -44,35 +44,35 @@ export default function Contact() {
       <div className="mx-auto mt-16 grid max-w-5xl grid-cols-1 gap-8 px-6 lg:grid-cols-2 lg:px-8">
         <Card className="space-y-5 p-7">
           <div className="flex items-center gap-3">
-            <Mail className="h-4.5 w-4.5 text-gold" />
+            <Mail className="h-4.5 w-4.5 text-primary" />
             <div>
               <p className="text-xs text-text-muted">{t.contactPage.fields.email}</p>
               <p className="font-medium text-text">{settings.businessEmail}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Phone className="h-4.5 w-4.5 text-gold" />
+            <Phone className="h-4.5 w-4.5 text-primary" />
             <div>
               <p className="text-xs text-text-muted">{t.contactPage.fields.phone}</p>
               <p className="font-medium text-text">{settings.phone}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <MessageCircle className="h-4.5 w-4.5 text-gold" />
+            <MessageCircle className="h-4.5 w-4.5 text-primary" />
             <div>
               <p className="text-xs text-text-muted">{t.contactPage.fields.whatsapp}</p>
               <p className="font-medium text-text">{settings.whatsapp}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <MapPin className="h-4.5 w-4.5 text-gold" />
+            <MapPin className="h-4.5 w-4.5 text-primary" />
             <div>
               <p className="text-xs text-text-muted">{t.contactPage.fields.address}</p>
               <p className="font-medium text-text">{settings.address}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Clock className="h-4.5 w-4.5 text-gold" />
+            <Clock className="h-4.5 w-4.5 text-primary" />
             <div>
               <p className="text-xs text-text-muted">{t.contactPage.fields.hours}</p>
               <p className="font-medium text-text">{t.contactPage.hoursValue}</p>

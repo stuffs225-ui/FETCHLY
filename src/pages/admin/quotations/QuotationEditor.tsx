@@ -215,7 +215,7 @@ export default function QuotationEditor() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/admin/quotations')} className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-light hover:bg-white/5">
+          <button onClick={() => navigate('/admin/quotations')} className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-light hover:bg-black/5">
             <ArrowRight className="h-4 w-4 rtl:hidden" />
             <ArrowLeft className="h-4 w-4 ltr:hidden" />
           </button>
@@ -249,7 +249,7 @@ export default function QuotationEditor() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <Card className="p-6">
-            <h3 className="text-sm font-bold text-gold">بيانات العرض</h3>
+            <h3 className="text-sm font-bold text-primary">بيانات العرض</h3>
             <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
                 <FieldLabel>رقم العرض</FieldLabel>
@@ -279,7 +279,7 @@ export default function QuotationEditor() {
                       key={d}
                       type="button"
                       onClick={() => setValidUntil(d as 7 | 15 | 30)}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${quotation.validUntilDays === d ? 'border-gold bg-gold/10 text-gold' : 'border-border-light text-text-muted'}`}
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${quotation.validUntilDays === d ? 'border-primary bg-primary/10 text-primary' : 'border-border-light text-text-muted'}`}
                     >
                       {d} يوم
                     </button>
@@ -291,7 +291,7 @@ export default function QuotationEditor() {
           </Card>
 
           <Card className="p-6">
-            <h3 className="text-sm font-bold text-gold">بيانات العميل</h3>
+            <h3 className="text-sm font-bold text-primary">بيانات العميل</h3>
             <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
                 <FieldLabel>الاسم</FieldLabel>
@@ -318,7 +318,7 @@ export default function QuotationEditor() {
 
           <Card className="p-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-gold">البنود</h3>
+              <h3 className="text-sm font-bold text-primary">البنود</h3>
               <Button size="sm" variant="secondary" onClick={addItem}>
                 <Plus className="h-3.5 w-3.5" /> إضافة بند
               </Button>
@@ -362,7 +362,7 @@ export default function QuotationEditor() {
           </Card>
 
           <Card className="p-6">
-            <h3 className="text-sm font-bold text-gold">الشروط التجارية</h3>
+            <h3 className="text-sm font-bold text-primary">الشروط التجارية</h3>
             <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
                 <FieldLabel>مدة التوريد</FieldLabel>
@@ -376,7 +376,7 @@ export default function QuotationEditor() {
                 <FieldLabel>شروط الدفع</FieldLabel>
                 <div className="flex flex-wrap gap-2">
                   {savedTerms.filter((t) => t.kind === 'payment').map((term) => (
-                    <button key={term.id} type="button" onClick={() => update('paymentTerms', term.value)} className="rounded-full border border-border-light px-3 py-1 text-xs text-text-muted hover:border-gold/40">
+                    <button key={term.id} type="button" onClick={() => update('paymentTerms', term.value)} className="rounded-full border border-border-light px-3 py-1 text-xs text-text-muted hover:border-primary/40">
                       {term.label}
                     </button>
                   ))}
@@ -390,8 +390,8 @@ export default function QuotationEditor() {
               <div>
                 <FieldLabel>تطبيق ضريبة القيمة المضافة؟</FieldLabel>
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => update('vatEnabled', true)} className={`rounded-lg border px-4 py-1.5 text-sm font-semibold ${quotation.vatEnabled ? 'border-gold bg-gold/10 text-gold' : 'border-border-light text-text-muted'}`}>نعم</button>
-                  <button type="button" onClick={() => update('vatEnabled', false)} className={`rounded-lg border px-4 py-1.5 text-sm font-semibold ${!quotation.vatEnabled ? 'border-gold bg-gold/10 text-gold' : 'border-border-light text-text-muted'}`}>لا</button>
+                  <button type="button" onClick={() => update('vatEnabled', true)} className={`rounded-lg border px-4 py-1.5 text-sm font-semibold ${quotation.vatEnabled ? 'border-primary bg-primary/10 text-primary' : 'border-border-light text-text-muted'}`}>نعم</button>
+                  <button type="button" onClick={() => update('vatEnabled', false)} className={`rounded-lg border px-4 py-1.5 text-sm font-semibold ${!quotation.vatEnabled ? 'border-primary bg-primary/10 text-primary' : 'border-border-light text-text-muted'}`}>لا</button>
                   {quotation.vatEnabled && (
                     <Input type="number" value={quotation.vatRate} onChange={(e) => update('vatRate', Number(e.target.value) || 0)} className="max-w-[90px]" />
                   )}
@@ -405,7 +405,7 @@ export default function QuotationEditor() {
                 <FieldLabel>الشروط والأحكام</FieldLabel>
                 <div className="flex flex-wrap gap-2">
                   {savedTerms.filter((t) => t.kind === 'tc').map((term) => (
-                    <button key={term.id} type="button" onClick={() => update('termsAndConditions', term.value)} className="rounded-full border border-border-light px-3 py-1 text-xs text-text-muted hover:border-gold/40">
+                    <button key={term.id} type="button" onClick={() => update('termsAndConditions', term.value)} className="rounded-full border border-border-light px-3 py-1 text-xs text-text-muted hover:border-primary/40">
                       {term.label}
                     </button>
                   ))}
@@ -417,10 +417,10 @@ export default function QuotationEditor() {
 
           {revisions.length > 1 && (
             <Card className="p-6">
-              <h3 className="text-sm font-bold text-gold">النسخ السابقة</h3>
+              <h3 className="text-sm font-bold text-primary">النسخ السابقة</h3>
               <div className="mt-3 space-y-2">
                 {revisions.map((r) => (
-                  <button key={r.id} onClick={() => navigate(`/admin/quotations/${r.id}`)} className={`flex w-full items-center justify-between rounded-lg border px-4 py-2.5 text-sm ${r.id === quotation.id ? 'border-gold bg-gold/5' : 'border-border-light'}`}>
+                  <button key={r.id} onClick={() => navigate(`/admin/quotations/${r.id}`)} className={`flex w-full items-center justify-between rounded-lg border px-4 py-2.5 text-sm ${r.id === quotation.id ? 'border-primary bg-primary/5' : 'border-border-light'}`}>
                     <span className="font-mono">{r.quotationNumber}</span>
                     <div className="flex items-center gap-2">
                       <StatusBadge status={r.status} />
@@ -434,7 +434,7 @@ export default function QuotationEditor() {
         </div>
 
         <div>
-          <Card className="sticky top-6 space-y-3 border-gold/30 bg-gold/5 p-6">
+          <Card className="sticky top-6 space-y-3 border-primary/30 bg-primary/5 p-6">
             <h4 className="text-xs font-semibold text-text-muted">ملخص العرض</h4>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between"><span className="text-text-muted">الإجمالي الفرعي</span><span className="font-mono text-text">{formatMoney(subtotal, quotation.currency, 'ar')}</span></div>
@@ -450,7 +450,7 @@ export default function QuotationEditor() {
 
           {sendPanel && (
             <Card className="mt-6 space-y-3 p-6">
-              <h4 className="text-sm font-bold text-gold">إرسال عرض السعر</h4>
+              <h4 className="text-sm font-bold text-primary">إرسال عرض السعر</h4>
               <div>
                 <FieldLabel>إلى</FieldLabel>
                 <Input dir="ltr" value={quotation.customerEmail} readOnly className="bg-surface/50" />

@@ -18,7 +18,7 @@ export default function Users() {
               <p className="font-bold text-text">{u.name}</p>
               <p className="text-sm text-text-muted" dir="ltr">{u.email}</p>
             </div>
-            <span className="rounded-full bg-gold/10 px-3 py-1 text-xs font-semibold text-gold">{u.role === 'admin' ? 'مشرف' : 'مبيعات'}</span>
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{u.role === 'admin' ? 'مشرف' : 'مبيعات'}</span>
           </Card>
         ))}
       </div>

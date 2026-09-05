@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Lock, AlertCircle } from 'lucide-react'
+import { Lock, AlertCircle, Globe2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { FieldLabel, Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
@@ -16,12 +16,14 @@ export default function AdminLogin({ onLogin }: { onLogin: (password: string) =>
     setError(!onLogin(password))
   }
 
+  const name = settings.companyNameAr.trim()
+
   return (
-    <div dir="rtl" lang="ar" className="flex min-h-screen items-center justify-center bg-ink px-6">
+    <div dir="rtl" lang="ar" className="flex min-h-screen items-center justify-center bg-surface px-6">
       <Card className="w-full max-w-sm p-8">
         <div className="text-center">
-          <span className="flex h-11 w-11 items-center justify-center rounded-lg border border-gold/40 bg-gradient-to-br from-navy to-ink mx-auto">
-            <span className="font-bold text-gold">{settings.companyNameAr.replace('[', '').charAt(0)}</span>
+          <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-lg bg-navy">
+            {name ? <span className="font-bold text-white">{name.charAt(0)}</span> : <Globe2 className="h-5 w-5 text-white" />}
           </span>
           <p className="mt-3 text-xs font-semibold uppercase tracking-[0.15em] text-text-muted">لوحة التحكم</p>
         </div>

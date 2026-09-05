@@ -13,7 +13,7 @@ export function FieldLabel({ className, ...props }: LabelHTMLAttributes<HTMLLabe
 }
 
 const fieldBase =
-  'w-full rounded-lg border border-border-light bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-text-muted/60 outline-none transition-all duration-150 focus:border-gold focus:ring-4 focus:ring-gold/15'
+  'w-full rounded-lg border border-border-light bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-text-muted/60 outline-none transition-all duration-150 focus:border-primary focus:ring-4 focus:ring-primary/15'
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   ({ className, ...props }, ref) => <input ref={ref} className={cn(fieldBase, className)} {...props} />,

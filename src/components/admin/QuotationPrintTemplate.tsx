@@ -88,12 +88,12 @@ export const QuotationPrintTemplate = forwardRef<HTMLDivElement, { quotation: Qu
         }}
       >
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '3px solid #c9a227', paddingBottom: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '3px solid #0e4a78', paddingBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {company.logoDataUrl ? (
               <img src={company.logoDataUrl} alt={companyName} style={{ height: '48px', objectFit: 'contain' }} />
             ) : (
-              <div style={{ height: '48px', width: '48px', borderRadius: '10px', background: '#1b2a4a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c9a227', fontWeight: 800, fontSize: '20px' }}>
+              <div style={{ height: '48px', width: '48px', borderRadius: '10px', background: '#1b2a4a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0e4a78', fontWeight: 800, fontSize: '20px' }}>
                 {companyName.replace('[', '').charAt(0)}
               </div>
             )}

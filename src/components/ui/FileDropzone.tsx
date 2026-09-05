@@ -50,7 +50,7 @@ export function FileDropzone({
         onClick={() => inputRef.current?.click()}
         className={cn(
           'flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed px-6 py-9 text-center transition-colors',
-          dragOver ? 'border-gold bg-gold/5' : 'border-border-light hover:border-gold/40',
+          dragOver ? 'border-primary bg-primary/5' : 'border-border-light hover:border-primary/40',
         )}
       >
         <UploadCloud className="h-8 w-8 text-text-muted" />

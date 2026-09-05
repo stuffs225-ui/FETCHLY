@@ -24,7 +24,7 @@ export default function WebsiteContent() {
       </p>
 
       <Card className="p-6">
-        <h3 className="text-sm font-bold text-gold">العنوان الرئيسي (Hero) — عربي</h3>
+        <h3 className="text-sm font-bold text-primary">العنوان الرئيسي (Hero) — عربي</h3>
         <div className="mt-4 space-y-4">
           <div>
             <FieldLabel>العنوان (افتراضي: {ar.hero.headline})</FieldLabel>
@@ -38,7 +38,7 @@ export default function WebsiteContent() {
       </Card>
 
       <Card className="p-6">
-        <h3 className="text-sm font-bold text-gold">Hero Headline — English</h3>
+        <h3 className="text-sm font-bold text-primary">Hero Headline — English</h3>
         <div className="mt-4 space-y-4">
           <div>
             <FieldLabel>Headline (default: {en.hero.headline})</FieldLabel>
@@ -59,7 +59,7 @@ export default function WebsiteContent() {
       </div>
 
       <Card className="p-6">
-        <h3 className="text-sm font-bold text-gold">إدارة محتوى أخرى</h3>
+        <h3 className="text-sm font-bold text-primary">إدارة محتوى أخرى</h3>
         <p className="mt-2 text-sm text-text-muted">
           حالات التوريد، الأسئلة الشائعة، والشهادات لها صفحات إدارة مخصصة في القائمة الجانبية لسهولة الإدارة.
         </p>

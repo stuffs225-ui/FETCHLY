@@ -14,7 +14,7 @@ const columns: Column<SourcingRequest>[] = [
   { key: 'requestNumber', header: 'رقم الطلب', render: (r) => <span className="font-mono text-xs">{r.requestNumber}</span> },
   { key: 'name', header: 'العميل' },
   { key: 'productName', header: 'المنتج', className: 'max-w-[200px] truncate' },
-  { key: 'city', header: 'المدينة' },
+  { key: 'phone', header: 'الجوال' },
   { key: 'status', header: 'الحالة', render: (r) => <StatusBadge status={r.status} /> },
   { key: 'createdAt', header: 'التاريخ', render: (r) => formatDate(r.createdAt) },
 ]
@@ -68,8 +68,8 @@ export default function Dashboard() {
       </div>
 
       {expiringQuotes.length > 0 && (
-        <Card className="flex flex-wrap items-center gap-x-6 gap-y-2 border-gold/30 bg-gold/5 p-4">
-          <div className="flex items-center gap-2 text-sm font-semibold text-gold">
+        <Card className="flex flex-wrap items-center gap-x-6 gap-y-2 border-primary/30 bg-primary/5 p-4">
+          <div className="flex items-center gap-2 text-sm font-semibold text-primary">
             <AlertTriangle className="h-4 w-4" /> تنبيهات
           </div>
           <button onClick={() => navigate('/admin/quotations')} className="text-sm text-text-muted hover:text-text hover:underline">
@@ -86,7 +86,7 @@ export default function Dashboard() {
               data={[
                 { label: 'جديد', value: count('new'), color: '#38bdf8' },
                 { label: 'قيد المراجعة', value: count('in_review'), color: '#fbbf24' },
-                { label: 'قيد التسعير', value: count('pricing'), color: '#c9a227' },
+                { label: 'قيد التسعير', value: count('pricing'), color: '#0e4a78' },
                 { label: 'تم الإرسال', value: count('quote_sent'), color: '#2b3f68' },
                 { label: 'موافقة', value: count('approved'), color: '#1e9e6b' },
                 { label: 'أخرى', value: count('customer_interested') + count('rejected') + count('closed'), color: '#5b6270' },
@@ -126,7 +126,7 @@ export default function Dashboard() {
       <div>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-base font-bold text-text">أحدث الطلبات</h3>
-          <button onClick={() => navigate('/admin/requests')} className="text-sm font-medium text-gold hover:underline">
+          <button onClick={() => navigate('/admin/requests')} className="text-sm font-medium text-primary hover:underline">
             عرض الكل ←
           </button>
         </div>

@@ -9,11 +9,11 @@ export default function AdminTopbar({ title }: { title: string }) {
         <Link to="/" target="_blank" className="flex items-center gap-1.5 text-xs text-text-muted hover:text-text">
           <ExternalLink className="h-3.5 w-3.5" /> عرض الموقع
         </Link>
-        <button className="relative flex h-9 w-9 items-center justify-center rounded-lg text-text-muted hover:bg-white/5 hover:text-text">
+        <button className="relative flex h-9 w-9 items-center justify-center rounded-lg text-text-muted hover:bg-black/5 hover:text-text">
           <Bell className="h-4.5 w-4.5" />
         </button>
         <div className="flex items-center gap-2.5 border-s border-border ps-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-gold to-navy text-xs font-bold text-white">أد</div>
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-navy text-xs font-bold text-white">أد</div>
           <div className="hidden sm:block">
             <p className="text-sm font-medium text-text">المشرف</p>
           </div>

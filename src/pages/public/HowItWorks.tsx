@@ -13,7 +13,7 @@ export default function HowItWorks() {
     <>
       <section className="border-b border-border py-20 text-center">
         <div className="mx-auto max-w-3xl px-6 lg:px-8">
-          <span className="text-xs font-semibold uppercase tracking-[0.15em] text-gold">{t.howItWorksPage.hero.eyebrow}</span>
+          <span className="text-xs font-semibold uppercase tracking-[0.15em] text-primary">{t.howItWorksPage.hero.eyebrow}</span>
           <h1 className="mt-3 text-4xl font-extrabold tracking-tight text-text sm:text-5xl">{t.howItWorksPage.hero.title}</h1>
           <p className="mt-5 text-lg text-text-muted">{t.howItWorksPage.hero.sub}</p>
         </div>
@@ -24,7 +24,7 @@ export default function HowItWorks() {
           <div className="relative space-y-12 border-s-2 border-border ps-10 sm:ps-14">
             {t.howItWorksPage.steps.map((step) => (
               <div key={step.num} className="relative">
-                <div className="absolute -start-[3.15rem] top-0 flex h-11 w-11 items-center justify-center rounded-full border-2 border-gold bg-ink font-mono text-sm font-bold text-gold sm:-start-[4.15rem]">
+                <div className="absolute -start-[3.15rem] top-0 flex h-11 w-11 items-center justify-center rounded-full border-2 border-primary bg-ink font-mono text-sm font-bold text-primary sm:-start-[4.15rem]">
                   {step.num}
                 </div>
                 <h3 className="text-xl font-bold text-text">{step.title}</h3>

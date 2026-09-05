@@ -34,11 +34,11 @@ export default function EmailSettingsPage() {
   return (
     <div className="max-w-4xl space-y-6">
       <Card className="border-navy-light/40 bg-navy-light/10 p-4 text-sm text-text-muted">
-        لم يتم ربط مزود بريد فعلي (مثل SMTP أو Resend) بعد. الرسائل أدناه تُسجَّل في سجل البريد للمراجعة بدلاً من إرسالها فعليًا — اربط <code className="font-mono text-gold">src/lib/emailService.ts</code> بمزود حقيقي عند الإطلاق.
+        لم يتم ربط مزود بريد فعلي (مثل SMTP أو Resend) بعد. الرسائل أدناه تُسجَّل في سجل البريد للمراجعة بدلاً من إرسالها فعليًا — اربط <code className="font-mono text-primary">src/lib/emailService.ts</code> بمزود حقيقي عند الإطلاق.
       </Card>
 
       <Card className="p-6">
-        <h3 className="text-sm font-bold text-gold">إعدادات المرسل</h3>
+        <h3 className="text-sm font-bold text-primary">إعدادات المرسل</h3>
         <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div><FieldLabel>اسم المرسل</FieldLabel><Input value={settings.senderName} onChange={(e) => setSettings((s) => ({ ...s, senderName: e.target.value }))} /></div>
           <div><FieldLabel>بريد المرسل</FieldLabel><Input dir="ltr" value={settings.senderEmail} onChange={(e) => setSettings((s) => ({ ...s, senderEmail: e.target.value }))} /></div>
@@ -48,7 +48,7 @@ export default function EmailSettingsPage() {
       </Card>
 
       <Card className="p-6">
-        <h3 className="text-sm font-bold text-gold">قالب تأكيد استلام الطلب</h3>
+        <h3 className="text-sm font-bold text-primary">قالب تأكيد استلام الطلب</h3>
         <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div>
             <p className="mb-2 text-xs font-semibold text-text-muted">عربي</p>
@@ -69,7 +69,7 @@ export default function EmailSettingsPage() {
       </Card>
 
       <Card className="p-6">
-        <h3 className="text-sm font-bold text-gold">قالب إرسال عرض السعر</h3>
+        <h3 className="text-sm font-bold text-primary">قالب إرسال عرض السعر</h3>
         <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div>
             <p className="mb-2 text-xs font-semibold text-text-muted">عربي</p>
@@ -97,7 +97,7 @@ export default function EmailSettingsPage() {
       </div>
 
       <div>
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-gold">
+        <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-primary">
           <Mail className="h-4 w-4" /> سجل البريد الإلكتروني
         </h3>
         <DataTable columns={columns} data={log} rowKey={(e) => e.id} pageSize={8} emptyLabel="لا توجد رسائل بعد" />

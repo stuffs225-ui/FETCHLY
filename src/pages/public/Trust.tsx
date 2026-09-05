@@ -11,13 +11,13 @@ export default function Trust() {
   const { t, locale } = useI18n()
   usePageTitle('الموثوقية والامتثال | الوضوح يبدأ من بياناتنا', 'Trust & Compliance | Clarity Starts With Our Data')
   const p = t.trustPage
-  const credentials = credentialsRepo.list().filter((c) => c.visible)
+  const credentials = credentialsRepo.list().filter((c) => c.visible && c.number && c.number.trim() !== '')
 
   return (
     <>
       <section className="border-b border-border py-20 text-center">
         <div className="mx-auto max-w-3xl px-6 lg:px-8">
-          <span className="text-xs font-semibold uppercase tracking-[0.15em] text-gold">{p.hero.eyebrow}</span>
+          <span className="text-xs font-semibold uppercase tracking-[0.15em] text-primary">{p.hero.eyebrow}</span>
           <h1 className="mt-3 text-4xl font-extrabold tracking-tight text-text sm:text-5xl">{p.hero.title}</h1>
         </div>
       </section>
@@ -43,7 +43,7 @@ export default function Trust() {
                     )}
                     <div className="flex justify-between gap-3">
                       <dt className="text-text-muted">{p.fields.number}</dt>
-                      <dd className="font-mono text-text">{c.number || t.common.pendingConfig}</dd>
+                      <dd className="font-mono text-text">{c.number}</dd>
                     </div>
                     {c.issuedDate && (
                       <div className="flex justify-between gap-3">
@@ -60,7 +60,7 @@ export default function Trust() {
                   </dl>
                   <div className="mt-4 flex items-center gap-4">
                     {c.verifyUrl && (
-                      <a href={c.verifyUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-gold hover:underline">
+                      <a href={c.verifyUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">
                         {p.fields.verify} <ExternalLink className="h-3 w-3" />
                       </a>
                     )}

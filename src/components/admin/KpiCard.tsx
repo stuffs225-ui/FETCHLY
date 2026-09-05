@@ -2,8 +2,8 @@ import type { LucideIcon } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { cn } from '@/lib/utils'
 
-export function KpiCard({ label, value, icon: Icon, accent = 'gold' }: { label: string; value: string; icon: LucideIcon; accent?: 'gold' | 'emerald' | 'navy' }) {
-  const accentClasses = { gold: 'bg-gold/10 text-gold', emerald: 'bg-emerald/10 text-emerald', navy: 'bg-navy-light/20 text-[#9db3e8]' }[accent]
+export function KpiCard({ label, value, icon: Icon, accent = 'primary' }: { label: string; value: string; icon: LucideIcon; accent?: 'primary' | 'emerald' | 'navy' }) {
+  const accentClasses = { primary: 'bg-primary/10 text-primary', emerald: 'bg-emerald/10 text-emerald', navy: 'bg-navy/10 text-navy' }[accent]
   return (
     <Card className="p-5">
       <div className={cn('flex h-10 w-10 items-center justify-center rounded-lg', accentClasses)}>

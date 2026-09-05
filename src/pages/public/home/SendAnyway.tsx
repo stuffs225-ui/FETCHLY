@@ -18,19 +18,19 @@ export default function SendAnyway() {
             return (
               <div
                 key={card.q}
-                className="group relative overflow-hidden rounded-2xl border border-border bg-card p-7 text-center transition-all duration-300 hover:-translate-y-1.5 hover:border-gold/50"
+                className="group relative overflow-hidden rounded-2xl border border-border bg-card p-7 text-center transition-all duration-300 hover:-translate-y-1.5 hover:border-primary/50"
               >
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-gold/15 to-navy/30 transition-transform duration-300 group-hover:scale-110">
-                  <Icon className="h-7 w-7 text-gold" />
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/15 to-navy/30 transition-transform duration-300 group-hover:scale-110">
+                  <Icon className="h-7 w-7 text-primary" />
                 </div>
                 <p className="mt-5 text-lg font-bold text-text">{card.q}</p>
-                <p className="mt-1.5 text-sm font-medium text-gold">{card.a}</p>
+                <p className="mt-1.5 text-sm font-medium text-primary">{card.a}</p>
               </div>
             )
           })}
         </div>
 
-        <p className="mt-14 text-center text-2xl font-extrabold text-gold">{t.sendAnyway.closing}</p>
+        <p className="mt-14 text-center text-2xl font-extrabold text-primary">{t.sendAnyway.closing}</p>
       </div>
     </section>
   )

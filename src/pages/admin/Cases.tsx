@@ -60,7 +60,7 @@ export default function Cases() {
               </div>
               <div className="flex items-center gap-2">
                 <label className="flex items-center gap-1.5 text-xs text-text-muted">
-                  <input type="checkbox" checked={c.published} onChange={(e) => casesRepo.upsert({ ...c, published: e.target.checked })} className="h-3.5 w-3.5 accent-gold" />
+                  <input type="checkbox" checked={c.published} onChange={(e) => casesRepo.upsert({ ...c, published: e.target.checked })} className="h-3.5 w-3.5 accent-primary" />
                   منشور
                 </label>
                 <button onClick={() => casesRepo.remove(c.id)} className="text-text-muted hover:text-danger">
@@ -70,7 +70,7 @@ export default function Cases() {
             </div>
             {c.challengeAr && <p className="mt-2 text-sm text-text-muted">التحدي: {c.challengeAr}</p>}
             {c.solutionAr && <p className="mt-1 text-sm text-text-muted">الحل: {c.solutionAr}</p>}
-            <button onClick={() => setDraft(c)} className="mt-3 text-xs font-semibold text-gold hover:underline">تعديل</button>
+            <button onClick={() => setDraft(c)} className="mt-3 text-xs font-semibold text-primary hover:underline">تعديل</button>
           </Card>
         ))}
       </div>

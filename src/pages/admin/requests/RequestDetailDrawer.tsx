@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Building2, Mail, Phone, MapPin, FileSpreadsheet, Save, Check } from 'lucide-react'
+import { Building2, Mail, Phone, FileSpreadsheet, Save, Check } from 'lucide-react'
 import { Drawer } from '@/components/ui/Drawer'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -55,7 +55,7 @@ export function RequestDetailDrawer({ request, onClose, onUpdate }: { request: S
         </div>
 
         <div>
-          <h4 className="text-xs font-bold uppercase tracking-wider text-gold">المنتج</h4>
+          <h4 className="text-xs font-bold uppercase tracking-wider text-primary">المنتج</h4>
           <p className="mt-2 text-lg font-semibold text-text">{request.productName}</p>
           {request.description && <p className="mt-1 text-sm text-text-muted">{request.description}</p>}
           <div className="mt-3 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
@@ -66,30 +66,30 @@ export function RequestDetailDrawer({ request, onClose, onUpdate }: { request: S
             {request.productUrl && (
               <div className="col-span-2">
                 <p className="text-text-muted">رابط المنتج</p>
-                <a href={request.productUrl} target="_blank" rel="noreferrer" className="mt-0.5 block truncate font-medium text-gold hover:underline" dir="ltr">
+                <a href={request.productUrl} target="_blank" rel="noreferrer" className="mt-0.5 block truncate font-medium text-primary hover:underline" dir="ltr">
                   {request.productUrl}
                 </a>
               </div>
             )}
             <div><p className="text-text-muted">تفضيل المصدر</p><p className="mt-0.5 font-medium text-text">{sourceLabels[request.sourcePreference]}</p></div>
+            {request.deliveryCity && <div><p className="text-text-muted">مدينة التسليم</p><p className="mt-0.5 font-medium text-text">{request.deliveryCity}</p></div>}
             {request.urgency && <div><p className="text-text-muted">الأولوية</p><p className="mt-0.5 font-medium text-text">{urgencyLabels[request.urgency]}</p></div>}
           </div>
         </div>
 
         <Card className="p-5">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-gold">العميل</h4>
+          <h4 className="text-xs font-bold uppercase tracking-wider text-primary">العميل</h4>
           <p className="mt-2 text-base font-semibold text-text">{request.name}</p>
           <div className="mt-3 space-y-2 text-sm text-text-muted">
             {request.company && <p className="flex items-center gap-2"><Building2 className="h-3.5 w-3.5" /> {request.company}</p>}
             <p className="flex items-center gap-2"><Mail className="h-3.5 w-3.5" /> {request.email}</p>
             <p className="flex items-center gap-2"><Phone className="h-3.5 w-3.5" /> {request.phone}</p>
-            <p className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5" /> {request.city}</p>
           </div>
         </Card>
 
         {request.attachmentIds.length > 0 && (
           <div>
-            <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-gold">المرفقات</h4>
+            <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-primary">المرفقات</h4>
             <div className="flex flex-wrap gap-3">
               {request.attachmentIds.map((id) => (
                 <AttachmentPreview key={id} id={id} />
@@ -99,7 +99,7 @@ export function RequestDetailDrawer({ request, onClose, onUpdate }: { request: S
         )}
 
         <div>
-          <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-gold">عروض الأسعار</h4>
+          <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-primary">عروض الأسعار</h4>
           {quotations.length === 0 ? (
             <p className="text-sm text-text-muted">لا توجد عروض أسعار لهذا الطلب بعد.</p>
           ) : (
@@ -108,7 +108,7 @@ export function RequestDetailDrawer({ request, onClose, onUpdate }: { request: S
                 <button
                   key={q.id}
                   onClick={() => navigate(`/admin/quotations/${q.id}`)}
-                  className="flex w-full items-center justify-between rounded-lg border border-border bg-card px-4 py-3 text-sm hover:border-gold/40"
+                  className="flex w-full items-center justify-between rounded-lg border border-border bg-card px-4 py-3 text-sm hover:border-primary/40"
                 >
                   <span className="font-mono">{q.quotationNumber}</span>
                   <StatusBadge status={q.status} />
@@ -128,7 +128,7 @@ export function RequestDetailDrawer({ request, onClose, onUpdate }: { request: S
 
         <div>
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-gold">ملاحظات داخلية</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-primary">ملاحظات داخلية</h4>
             <span className="text-[10px] text-text-muted">غير مرئية للعميل</span>
           </div>
           <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-2" />
@@ -138,10 +138,10 @@ export function RequestDetailDrawer({ request, onClose, onUpdate }: { request: S
         </div>
 
         <div>
-          <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-gold">سجل النشاط</h4>
+          <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-primary">سجل النشاط</h4>
           <ol className="space-y-3 border-s-2 border-border ps-5">
             <li className="relative">
-              <span className="absolute -start-[1.4rem] top-1 h-2.5 w-2.5 rounded-full bg-gold" />
+              <span className="absolute -start-[1.4rem] top-1 h-2.5 w-2.5 rounded-full bg-primary" />
               <p className="text-sm text-text">تم إنشاء الطلب</p>
               <p className="text-xs text-text-muted">{formatDateTime(request.createdAt)}</p>
             </li>

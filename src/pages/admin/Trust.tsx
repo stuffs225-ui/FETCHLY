@@ -71,7 +71,7 @@ export default function Trust() {
             {draft.documentAttachmentId && <span className="text-xs text-emerald">تم رفع المستند</span>}
           </div>
           <label className="flex items-center gap-2 text-sm text-text-muted">
-            <input type="checkbox" checked={draft.visible} onChange={(e) => setDraft({ ...draft, visible: e.target.checked })} className="h-4 w-4 accent-gold" />
+            <input type="checkbox" checked={draft.visible} onChange={(e) => setDraft({ ...draft, visible: e.target.checked })} className="h-4 w-4 accent-primary" />
             عرض في الموقع العام
           </label>
           <div className="flex gap-2">
@@ -92,7 +92,7 @@ export default function Trust() {
               </div>
               <div className="flex items-center gap-2">
                 <label className="flex items-center gap-1.5 text-xs text-text-muted">
-                  <input type="checkbox" checked={c.visible} onChange={(e) => credentialsRepo.upsert({ ...c, visible: e.target.checked })} className="h-3.5 w-3.5 accent-gold" />
+                  <input type="checkbox" checked={c.visible} onChange={(e) => credentialsRepo.upsert({ ...c, visible: e.target.checked })} className="h-3.5 w-3.5 accent-primary" />
                   ظاهر
                 </label>
                 <button onClick={() => credentialsRepo.remove(c.id)} className="text-text-muted hover:text-danger">
@@ -100,7 +100,7 @@ export default function Trust() {
                 </button>
               </div>
             </div>
-            <button onClick={() => setDraft(c)} className="mt-3 text-xs font-semibold text-gold hover:underline">تعديل</button>
+            <button onClick={() => setDraft(c)} className="mt-3 text-xs font-semibold text-primary hover:underline">تعديل</button>
           </Card>
         ))}
       </div>

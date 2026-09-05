@@ -14,7 +14,7 @@ export function Accordion({ items }: { items: { q: string; a: string }[] }) {
           >
             <span className="font-medium text-text">{item.q}</span>
             <Plus
-              className={cn('h-5 w-5 shrink-0 text-gold transition-transform duration-300', open === i && 'rotate-45')}
+              className={cn('h-5 w-5 shrink-0 text-primary transition-transform duration-300', open === i && 'rotate-45')}
             />
           </button>
           <div

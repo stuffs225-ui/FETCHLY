@@ -7,7 +7,7 @@ export function DonutChart({ data, size = 170, thickness = 24 }: { data: { label
   return (
     <div className="flex flex-wrap items-center justify-center gap-6">
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#242a3a" strokeWidth={thickness} />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#eceae3" strokeWidth={thickness} />
         {data.map((d, i) => {
           const fraction = total === 0 ? 0 : d.value / total
           const dash = fraction * circumference

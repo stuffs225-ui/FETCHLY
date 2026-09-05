@@ -4,18 +4,18 @@ import type { RequestStatus, QuotationStatus } from '@/lib/types'
 type AnyStatus = RequestStatus | QuotationStatus
 
 const config: Record<AnyStatus, { label: string; dot: string; text: string; bg: string }> = {
-  new: { label: 'طلب جديد', dot: 'bg-sky-400', text: 'text-sky-300', bg: 'bg-sky-400/10' },
-  in_review: { label: 'قيد المراجعة', dot: 'bg-amber-400', text: 'text-amber-300', bg: 'bg-amber-400/10' },
-  pricing: { label: 'قيد التسعير', dot: 'bg-gold', text: 'text-gold', bg: 'bg-gold/10' },
-  quote_sent: { label: 'تم إرسال عرض السعر', dot: 'bg-navy-light', text: 'text-[#9db3e8]', bg: 'bg-navy-light/20' },
-  customer_interested: { label: 'العميل مهتم', dot: 'bg-purple-400', text: 'text-purple-300', bg: 'bg-purple-400/10' },
+  new: { label: 'طلب جديد', dot: 'bg-sky-500', text: 'text-sky-700', bg: 'bg-sky-50' },
+  in_review: { label: 'قيد المراجعة', dot: 'bg-amber-500', text: 'text-amber-700', bg: 'bg-amber-50' },
+  pricing: { label: 'قيد التسعير', dot: 'bg-primary', text: 'text-primary', bg: 'bg-primary/10' },
+  quote_sent: { label: 'تم إرسال عرض السعر', dot: 'bg-navy', text: 'text-navy', bg: 'bg-navy/10' },
+  customer_interested: { label: 'العميل مهتم', dot: 'bg-purple-500', text: 'text-purple-700', bg: 'bg-purple-50' },
   approved: { label: 'تمت الموافقة', dot: 'bg-emerald', text: 'text-emerald', bg: 'bg-emerald/10' },
-  rejected: { label: 'مرفوض', dot: 'bg-red-400', text: 'text-red-300', bg: 'bg-red-400/10' },
-  closed: { label: 'مغلق', dot: 'bg-gray-400', text: 'text-gray-300', bg: 'bg-gray-400/10' },
-  draft: { label: 'مسودة', dot: 'bg-gray-400', text: 'text-gray-300', bg: 'bg-gray-400/10' },
-  sent: { label: 'مُرسل', dot: 'bg-navy-light', text: 'text-[#9db3e8]', bg: 'bg-navy-light/20' },
+  rejected: { label: 'مرفوض', dot: 'bg-red-500', text: 'text-red-700', bg: 'bg-red-50' },
+  closed: { label: 'مغلق', dot: 'bg-gray-400', text: 'text-gray-600', bg: 'bg-gray-100' },
+  draft: { label: 'مسودة', dot: 'bg-gray-400', text: 'text-gray-600', bg: 'bg-gray-100' },
+  sent: { label: 'مُرسل', dot: 'bg-navy', text: 'text-navy', bg: 'bg-navy/10' },
   accepted: { label: 'مقبول', dot: 'bg-emerald', text: 'text-emerald', bg: 'bg-emerald/10' },
-  expired: { label: 'منتهي', dot: 'bg-red-400', text: 'text-red-300', bg: 'bg-red-400/10' },
+  expired: { label: 'منتهي', dot: 'bg-red-500', text: 'text-red-700', bg: 'bg-red-50' },
 }
 
 export function StatusBadge({ status, className }: { status: AnyStatus; className?: string }) {

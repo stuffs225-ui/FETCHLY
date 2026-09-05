@@ -1,33 +1,27 @@
 import { usePageTitle } from '@/lib/usePageTitle'
 import Hero from './home/Hero'
-import TrustStrip from './home/TrustStrip'
+import TrustSection from './home/TrustSection'
 import SendAnyway from './home/SendAnyway'
-import HowItWorksHome from './home/HowItWorksHome'
-import GlobalSourcing from './home/GlobalSourcing'
 import WhatWeSourceHome from './home/WhatWeSourceHome'
-import HardToFind from './home/HardToFind'
+import HowItWorksHome from './home/HowItWorksHome'
 import WhyUs from './home/WhyUs'
 import CasesSection from './home/CasesSection'
-import TrustCta from './home/TrustCta'
 import RequestSection from './home/RequestSection'
 
 export default function Home() {
   usePageTitle(
-    'مصدر توريد عالمي للسعودية | ما لقيته محليًا، نوفره من أي مكان في العالم',
-    'Global Sourcing for Saudi Arabia | Whatever You Need, Wherever It Is',
+    'مصدر توريد عالمي للسعودية | ما لقيته محليًا؟ نوفره لك',
+    'Global Sourcing for Saudi Arabia | Can\'t Find It Locally? We\'ll Get It For You',
   )
   return (
     <>
       <Hero />
-      <TrustStrip />
+      <TrustSection />
       <SendAnyway />
-      <HowItWorksHome />
-      <GlobalSourcing />
       <WhatWeSourceHome />
-      <HardToFind />
+      <HowItWorksHome />
       <WhyUs />
       <CasesSection />
-      <TrustCta />
       <RequestSection />
     </>
   )

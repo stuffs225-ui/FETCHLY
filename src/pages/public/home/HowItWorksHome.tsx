@@ -14,7 +14,7 @@ export default function HowItWorksHome() {
           <div className="absolute top-8 start-0 end-0 hidden h-px bg-gradient-to-r from-transparent via-border-light to-transparent sm:block" />
           {t.howItWorksHome.steps.map((step) => (
             <div key={step.num} className="relative text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-gold/40 bg-ink font-mono text-xl font-bold text-gold">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-primary/40 bg-ink font-mono text-xl font-bold text-primary">
                 {step.num}
               </div>
               <h3 className="mt-5 text-lg font-bold text-text">{step.title}</h3>
