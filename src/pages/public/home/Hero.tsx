@@ -1,56 +1,50 @@
-import { ArrowRight, PlayCircle } from 'lucide-react'
+import { Compass } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-
-const stats = [
-  { value: '2,400+', label: 'Products Sourced' },
-  { value: '98%', label: 'On-Time Delivery' },
-  { value: '60+', label: 'Countries Served' },
-  { value: '$0', label: 'Hidden Fees' },
-]
+import { DirArrow } from '@/components/ui/DirArrow'
+import GlobeStage from '@/components/three/GlobeStage'
+import { useI18n } from '@/i18n'
+import { contentOverridesStore } from '@/lib/repo'
+import { useCollectionVersion } from '@/lib/useCollection'
 
 export default function Hero() {
+  useCollectionVersion()
+  const { t, locale } = useI18n()
+  const overrides = contentOverridesStore.get()
+  const headline = (locale === 'ar' ? overrides.heroHeadlineAr : overrides.heroHeadlineEn) || t.hero.headline
+  const sub = (locale === 'ar' ? overrides.heroSubAr : overrides.heroSubEn) || t.hero.sub
+
   return (
-    <section className="relative overflow-hidden pt-20 pb-24 sm:pt-28 sm:pb-32">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -left-32 h-[32rem] w-[32rem] animate-float rounded-full bg-primary/25 blur-[110px]" />
-        <div className="absolute top-10 right-[-10rem] h-[28rem] w-[28rem] animate-float-slow rounded-full bg-gold/20 blur-[110px]" />
-        <div className="absolute inset-0 bg-noise opacity-40" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-bg" />
-      </div>
+    <section className="relative overflow-hidden pb-20 pt-16 sm:pb-28 sm:pt-24">
+      <div className="pointer-events-none absolute inset-0 bg-grid opacity-[0.4] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_20%,black,transparent)]" />
+      <div className="pointer-events-none absolute -top-32 start-1/2 h-[36rem] w-[36rem] -translate-x-1/2 animate-drift rounded-full bg-gold/10 blur-[130px]" />
 
-      <div className="relative mx-auto max-w-5xl px-6 text-center lg:px-8">
-        <div className="animate-fade-up mb-7 inline-flex items-center gap-2 rounded-full border border-border-light bg-white/5 px-4 py-1.5 text-sm font-medium text-text-secondary backdrop-blur">
-          <span>🇺🇸</span> USA + <span>🇬🇧</span> UK Sourcing Network
+      <div className="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-6 lg:grid-cols-2 lg:px-8">
+        <div className="text-center lg:text-start">
+          <div className="animate-fade-up mb-6 inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/5 px-4 py-1.5 text-sm font-medium text-gold">
+            <Compass className="h-3.5 w-3.5" />
+            {t.hero.eyebrow}
+          </div>
+
+          <h1 className="animate-fade-up text-balance text-4xl font-extrabold leading-[1.2] tracking-tight text-text sm:text-5xl lg:text-[3.4rem]" style={{ animationDelay: '80ms' }}>
+            {headline}
+          </h1>
+
+          <p className="animate-fade-up mx-auto mt-6 max-w-xl text-balance text-lg leading-relaxed text-text-muted lg:mx-0" style={{ animationDelay: '160ms' }}>
+            {sub}
+          </p>
+
+          <div className="animate-fade-up mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row lg:justify-start" style={{ animationDelay: '240ms' }}>
+            <Button to="/request" size="lg">
+              {t.hero.ctaPrimary} <DirArrow />
+            </Button>
+            <Button to="/how-it-works" variant="secondary" size="lg">
+              {t.hero.ctaSecondary}
+            </Button>
+          </div>
         </div>
 
-        <h1 className="animate-fade-up text-balance font-display text-5xl font-extrabold leading-[1.05] tracking-tight text-text sm:text-6xl lg:text-7xl" style={{ animationDelay: '80ms' }}>
-          Source Anything from the{' '}
-          <span className="bg-gradient-to-r from-primary via-[#7d93ff] to-gold bg-clip-text text-transparent">
-            US & UK
-          </span>
-        </h1>
-
-        <p className="animate-fade-up mx-auto mt-6 max-w-2xl text-balance text-lg leading-relaxed text-text-secondary sm:text-xl" style={{ animationDelay: '160ms' }}>
-          Submit a request. Get a quote in 24h. We handle purchasing, shipping & customs —
-          door to door.
-        </p>
-
-        <div className="animate-fade-up mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row" style={{ animationDelay: '240ms' }}>
-          <Button to="/request" size="lg">
-            Submit a Request <ArrowRight className="h-5 w-5" />
-          </Button>
-          <Button to="/how-it-works" variant="secondary" size="lg">
-            <PlayCircle className="h-5 w-5" /> How It Works
-          </Button>
-        </div>
-
-        <div className="animate-fade-up mx-auto mt-20 grid max-w-4xl grid-cols-2 gap-8 border-t border-border pt-10 sm:grid-cols-4" style={{ animationDelay: '320ms' }}>
-          {stats.map((s) => (
-            <div key={s.label}>
-              <div className="font-mono text-3xl font-bold text-text sm:text-4xl">{s.value}</div>
-              <div className="mt-1.5 text-xs font-medium uppercase tracking-wider text-text-secondary">{s.label}</div>
-            </div>
-          ))}
+        <div className="animate-fade-in relative mx-auto aspect-square w-full max-w-lg lg:max-w-none" style={{ animationDelay: '200ms' }}>
+          <GlobeStage className="h-full w-full" />
         </div>
       </div>
     </section>

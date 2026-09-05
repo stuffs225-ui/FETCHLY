@@ -1,0 +1,46 @@
+import { useI18n } from '@/i18n'
+import { casesRepo } from '@/lib/repo'
+import { useCollectionVersion } from '@/lib/useCollection'
+import { Card } from '@/components/ui/Card'
+
+export default function CasesSection() {
+  useCollectionVersion()
+  const { t, locale } = useI18n()
+  const cases = casesRepo.list().filter((c) => c.published)
+
+  if (cases.length === 0) return null
+
+  return (
+    <section className="border-t border-border bg-surface/60 py-24">
+      <div className="mx-auto max-w-6xl px-6 lg:px-8">
+        <h2 className="text-center text-3xl font-extrabold tracking-tight text-text sm:text-4xl">{t.cases.title}</h2>
+
+        <div className="mt-14 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {cases.map((c) => (
+            <Card key={c.id} className="p-6">
+              <h3 className="text-lg font-bold text-text">{locale === 'ar' ? c.titleAr : c.titleEn}</h3>
+              <dl className="mt-4 space-y-2.5 text-sm">
+                <div className="flex justify-between gap-3">
+                  <dt className="text-text-muted">{t.cases.sourceLabel}</dt>
+                  <dd className="font-medium text-text">{locale === 'ar' ? c.sourceAr : c.sourceEn}</dd>
+                </div>
+                {(locale === 'ar' ? c.challengeAr : c.challengeEn) && (
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-text-muted">{t.cases.challengeLabel}</dt>
+                    <dd className="text-end font-medium text-text">{locale === 'ar' ? c.challengeAr : c.challengeEn}</dd>
+                  </div>
+                )}
+                {(locale === 'ar' ? c.solutionAr : c.solutionEn) && (
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-text-muted">{t.cases.solutionLabel}</dt>
+                    <dd className="text-end font-medium text-text">{locale === 'ar' ? c.solutionAr : c.solutionEn}</dd>
+                  </div>
+                )}
+              </dl>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}

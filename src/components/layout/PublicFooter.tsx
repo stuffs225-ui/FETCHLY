@@ -1,84 +1,79 @@
 import { Link } from 'react-router-dom'
-import { MessageCircle, Mail } from 'lucide-react'
+import { Mail, Phone } from 'lucide-react'
 import { Logo } from './Logo'
-
-const columns = [
-  {
-    title: 'Company',
-    links: [
-      { label: 'How It Works', to: '/how-it-works' },
-      { label: 'Pricing', to: '/pricing' },
-      { label: 'Corporate Procurement', to: '/how-it-works' },
-      { label: 'Track Order', to: '/track' },
-    ],
-  },
-  {
-    title: 'Legal',
-    links: [
-      { label: 'Privacy Policy', to: '/privacy' },
-      { label: 'Terms of Service', to: '/terms' },
-      { label: 'Refund Policy', to: '/refund' },
-    ],
-  },
-]
+import { TrustBar } from './TrustBar'
+import { useI18n } from '@/i18n'
+import { companySettingsStore } from '@/lib/repo'
+import { useCollectionVersion } from '@/lib/useCollection'
 
 export default function PublicFooter() {
-  return (
-    <footer className="border-t border-border bg-surface">
-      <div className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
-        <div className="grid grid-cols-1 gap-12 lg:grid-cols-[2fr_1fr_1fr_1.2fr]">
-          <div>
-            <Logo />
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-text-secondary">
-              The World. Delivered. Source anything from the US &amp; UK — we handle the rest.
-            </p>
-            <div className="mt-6 flex items-center gap-3">
-              <a
-                href="mailto:hello@fetchly.com"
-                className="flex items-center gap-2 rounded-lg border border-border-light px-3.5 py-2 text-xs font-medium text-text-secondary transition-colors hover:border-primary hover:text-text"
-              >
-                <Mail className="h-3.5 w-3.5" /> hello@fetchly.com
-              </a>
-              <a
-                href="#"
-                className="flex items-center gap-2 rounded-lg border border-success/40 bg-success/10 px-3.5 py-2 text-xs font-medium text-success transition-colors hover:bg-success/20"
-              >
-                <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
-              </a>
-            </div>
-          </div>
+  useCollectionVersion()
+  const { t } = useI18n()
+  const settings = companySettingsStore.get()
 
-          {columns.map((col) => (
-            <div key={col.title}>
-              <h4 className="mb-4 text-xs font-semibold uppercase tracking-[0.1em] text-text-secondary">{col.title}</h4>
-              <ul className="space-y-3">
-                {col.links.map((link) => (
-                  <li key={link.label}>
-                    <Link to={link.to} className="text-sm text-text-secondary transition-colors hover:text-text">
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
+  return (
+    <footer>
+      <TrustBar />
+      <div className="border-t border-border bg-surface">
+        <div className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
+          <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1.3fr]">
+            <div>
+              <Logo />
+              <p className="mt-4 max-w-xs text-sm leading-relaxed text-text-muted">{t.hero.eyebrow}</p>
+              <div className="mt-6 flex flex-col gap-2 text-sm text-text-muted">
+                <a href={`mailto:${settings.businessEmail}`} className="flex items-center gap-2 hover:text-text">
+                  <Mail className="h-3.5 w-3.5" /> {settings.businessEmail}
+                </a>
+                <a href={`tel:${settings.phone}`} className="flex items-center gap-2 hover:text-text">
+                  <Phone className="h-3.5 w-3.5" /> {settings.phone}
+                </a>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="mb-4 text-xs font-semibold text-text-muted">{t.footer.companyHeading}</h4>
+              <ul className="space-y-3 text-sm">
+                <li><Link to="/about" className="text-text-muted hover:text-text">{t.footer.links.about}</Link></li>
+                <li><Link to="/how-it-works" className="text-text-muted hover:text-text">{t.footer.links.howItWorks}</Link></li>
+                <li><Link to="/trust" className="text-text-muted hover:text-text">{t.footer.links.trust}</Link></li>
+                <li><Link to="/contact" className="text-text-muted hover:text-text">{t.footer.links.contact}</Link></li>
               </ul>
             </div>
-          ))}
 
-          <div>
-            <h4 className="mb-4 text-xs font-semibold uppercase tracking-[0.1em] text-text-secondary">Sourcing From</h4>
-            <div className="space-y-3 text-sm text-text-secondary">
-              <p>🇺🇸 United States</p>
-              <p>🇬🇧 United Kingdom</p>
+            <div>
+              <h4 className="mb-4 text-xs font-semibold text-text-muted">{t.footer.servicesHeading}</h4>
+              <ul className="space-y-3 text-sm">
+                <li><Link to="/request" className="text-text-muted hover:text-text">{t.footer.links.requestQuote}</Link></li>
+                <li><Link to="/what-we-source" className="text-text-muted hover:text-text">{t.footer.links.whatWeSource}</Link></li>
+                <li><Link to="/faq" className="text-text-muted hover:text-text">{t.footer.links.faq}</Link></li>
+              </ul>
+              <h4 className="mb-3 mt-6 text-xs font-semibold text-text-muted">{t.footer.legalHeading}</h4>
+              <ul className="space-y-3 text-sm">
+                <li><Link to="/legal/privacy" className="text-text-muted hover:text-text">{t.footer.links.privacy}</Link></li>
+                <li><Link to="/legal/terms" className="text-text-muted hover:text-text">{t.footer.links.terms}</Link></li>
+                <li><Link to="/legal/complaints" className="text-text-muted hover:text-text">{t.footer.links.complaints}</Link></li>
+                <li><Link to="/legal/cookies" className="text-text-muted hover:text-text">{t.footer.links.cookies}</Link></li>
+              </ul>
             </div>
-            <h4 className="mb-3 mt-6 text-xs font-semibold uppercase tracking-[0.1em] text-text-secondary">Admin</h4>
-            <Link to="/admin" className="text-sm text-text-secondary transition-colors hover:text-text">
-              Admin Portal →
-            </Link>
-          </div>
-        </div>
 
-        <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 text-xs text-text-secondary sm:flex-row">
-          <p>© 2026 FETCHLY. All rights reserved.</p>
-          <p>🇺🇸 Sourcing from USA &amp; UK 🇬🇧 &nbsp;|&nbsp; Delivered Worldwide 🌍</p>
+            <div>
+              <h4 className="mb-4 text-xs font-semibold text-text-muted">{t.footer.companyDataHeading}</h4>
+              <ul className="space-y-2 text-sm text-text-muted">
+                <li>{settings.companyNameAr}</li>
+                <li>CR: {settings.crNumber}</li>
+                <li>VAT: {settings.vatNumber}</li>
+                <li>{settings.nationalAddress}</li>
+                <li>{settings.websiteDomain}</li>
+              </ul>
+              <Link to="/admin" className="mt-4 inline-block text-xs text-text-muted/60 hover:text-text-muted">
+                {t.nav.admin}
+              </Link>
+            </div>
+          </div>
+
+          <div className="mt-14 border-t border-border pt-8 text-center text-xs text-text-muted">
+            <p>© {new Date().getFullYear()} {settings.companyNameAr} — {t.footer.rights}</p>
+          </div>
         </div>
       </div>
     </footer>
