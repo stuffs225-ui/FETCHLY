@@ -58,7 +58,7 @@ export default function AdminLayout() {
       {/* mobile drawer */}
       <div className={cn('fixed inset-0 z-50 lg:hidden', mobileOpen ? 'pointer-events-auto' : 'pointer-events-none')}>
         <div onClick={() => setMobileOpen(false)} className={cn('absolute inset-0 bg-black/60 transition-opacity', mobileOpen ? 'opacity-100' : 'opacity-0')} />
-        <div className={cn('absolute inset-y-0 start-0 w-64 bg-surface transition-transform', mobileOpen ? 'translate-x-0' : 'rtl:translate-x-[-100%] ltr:translate-x-[-100%]')}>
+        <div className={cn('absolute inset-y-0 start-0 w-64 bg-surface transition-transform', mobileOpen ? 'translate-x-0' : 'translate-x-full')}>
           <AdminSidebar onLogout={handleLogout} />
         </div>
       </div>

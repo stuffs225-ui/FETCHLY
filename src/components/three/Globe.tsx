@@ -34,43 +34,23 @@ function latLonToVector3(lat: number, lon: number, radius: number): THREE.Vector
   )
 }
 
-function ArcPulse({ curve, delay }: { curve: THREE.QuadraticBezierCurve3; delay: number }) {
-  const ref = useRef<THREE.Mesh>(null)
-  useFrame(({ clock }) => {
-    if (!ref.current) return
-    const t = (clock.elapsedTime * 0.18 + delay) % 1
-    const point = curve.getPoint(t)
-    ref.current.position.copy(point)
-    const scale = Math.sin(t * Math.PI)
-    ref.current.scale.setScalar(0.4 + scale * 0.6)
-  })
-  return (
-    <mesh ref={ref}>
-      <sphereGeometry args={[0.028, 8, 8]} />
-      <meshBasicMaterial color="#e0bd4f" />
-    </mesh>
-  )
-}
-
-function Arc({ from, to, index }: { from: THREE.Vector3; to: THREE.Vector3; index: number }) {
-  const mid = from.clone().add(to).multiplyScalar(0.5).normalize().multiplyScalar(RADIUS * 1.35)
+// A static arc (no traveling "pulse" dot) — enough to read as a connection
+// between the hub and a market without the site tipping into a
+// blockchain/network-diagram look.
+function Arc({ from, to }: { from: THREE.Vector3; to: THREE.Vector3 }) {
+  const mid = from.clone().add(to).multiplyScalar(0.5).normalize().multiplyScalar(RADIUS * 1.3)
   const curve = useMemo(() => new THREE.QuadraticBezierCurve3(from, mid, to), [from, mid, to])
   const points = useMemo(() => curve.getPoints(48), [curve])
   const geometry = useMemo(() => new THREE.BufferGeometry().setFromPoints(points), [points])
 
-  return (
-    <>
-      <primitive object={new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: '#c9a227', transparent: true, opacity: 0.45 }))} />
-      <ArcPulse curve={curve} delay={index * 0.16} />
-    </>
-  )
+  return <primitive object={new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: '#9a8a5f', transparent: true, opacity: 0.28 }))} />
 }
 
 function Dot({ position, hub }: { position: THREE.Vector3; hub?: boolean }) {
   return (
     <mesh position={position}>
       <sphereGeometry args={[hub ? 0.05 : 0.03, 12, 12]} />
-      <meshBasicMaterial color={hub ? '#e0bd4f' : '#dfe4ee'} />
+      <meshBasicMaterial color={hub ? '#c9a668' : '#dfe4ee'} />
     </mesh>
   )
 }
@@ -86,10 +66,10 @@ function GlobeScene({ autoRotate }: { autoRotate: boolean }) {
 
   return (
     <group ref={group} rotation={[0.25, -0.6, 0]}>
-      {/* wireframe shell */}
+      {/* wireframe shell — coarse and dim, reads as a globe grid rather than a circuit/network pattern */}
       <mesh>
-        <icosahedronGeometry args={[RADIUS, 3]} />
-        <meshBasicMaterial color="#c9a227" wireframe transparent opacity={0.22} />
+        <icosahedronGeometry args={[RADIUS, 2]} />
+        <meshBasicMaterial color="#8f8367" wireframe transparent opacity={0.14} />
       </mesh>
       {/* solid inner sphere for depth */}
       <mesh>
@@ -101,8 +81,8 @@ function GlobeScene({ autoRotate }: { autoRotate: boolean }) {
       {markets.map((m) => (
         <Dot key={m.name} position={m.pos} />
       ))}
-      {markets.map((m, i) => (
-        <Arc key={m.name} from={hubPos.clone()} to={m.pos.clone()} index={i} />
+      {markets.map((m) => (
+        <Arc key={m.name} from={hubPos.clone()} to={m.pos.clone()} />
       ))}
     </group>
   )
@@ -126,9 +106,9 @@ export default function Globe({ className }: { className?: string }) {
         gl={{ antialias: true, alpha: true }}
         camera={{ position: [0, 0, 4.4], fov: 42 }}
       >
-        <ambientLight intensity={0.7} />
-        <pointLight position={[4, 3, 5]} intensity={80} color="#e0bd4f" />
-        <pointLight position={[-4, -2, -4]} intensity={40} color="#2b3f68" />
+        <ambientLight intensity={0.8} />
+        <pointLight position={[4, 3, 5]} intensity={45} color="#cbbf9e" />
+        <pointLight position={[-4, -2, -4]} intensity={30} color="#2b3f68" />
         <Suspense fallback={null}>
           <GlobeScene autoRotate={!reducedMotion} />
         </Suspense>

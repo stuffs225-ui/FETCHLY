@@ -11,7 +11,7 @@ export const en: Dict = {
     howItWorks: 'How It Works',
     whatWeSource: 'What We Source',
     about: 'About Us',
-    trust: 'Trust & Compliance',
+    trust: 'Trust',
     faq: 'FAQ',
     contact: 'Contact',
     requestQuote: 'Request a Quote',
@@ -84,13 +84,10 @@ export const en: Dict = {
   whyUs: {
     title: 'Why Us',
     items: [
-      { title: 'Global Sources', desc: "We don't rely on a single market." },
-      { title: 'No Registration', desc: 'Send your request directly.' },
-      { title: 'Simple to Request', desc: 'A photo or link may be enough to start.' },
+      { title: 'No Registration', desc: 'Send your request directly, no account needed.' },
+      { title: 'Multiple Ways to Send It', desc: 'A photo, a link, a part number, or a description — any of these is enough to start.' },
+      { title: 'Multiple Sources', desc: 'We search the markets that suit each request.' },
       { title: 'Clear Quotations', desc: 'Product, quantity, price, lead time and terms.' },
-      { title: 'Reliable Sourcing', desc: 'We look for suitable sources and verify product requirements where possible.' },
-      { title: 'Import Awareness', desc: 'We factor in relevant regulatory requirements when applicable.' },
-      { title: 'Direct Communication', desc: 'Quotation and follow-up, by email.' },
     ],
   },
   cases: {

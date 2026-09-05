@@ -333,11 +333,11 @@ export default function QuotationEditor() {
                     <FieldLabel>البند</FieldLabel>
                     <Input list="saved-products" value={item.name} onChange={(e) => applySavedProduct(item.id, e.target.value)} />
                   </div>
-                  <div className="sm:col-span-3">
+                  <div className="sm:col-span-2">
                     <FieldLabel>الوصف</FieldLabel>
                     <Input value={item.description ?? ''} onChange={(e) => updateItem(item.id, { description: e.target.value })} />
                   </div>
-                  <div className="sm:col-span-1">
+                  <div className="sm:col-span-2">
                     <FieldLabel>الكمية</FieldLabel>
                     <Input type="number" min={1} value={item.quantity} onChange={(e) => updateItem(item.id, { quantity: Number(e.target.value) || 1 })} />
                   </div>
