@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Building2, Mail, Phone, FileSpreadsheet, Save, Check } from 'lucide-react'
 import { Drawer } from '@/components/ui/Drawer'
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Select, Textarea, Input, FieldLabel } from '@/components/ui/Input'
 import { AttachmentPreview } from '@/components/admin/AttachmentPreview'
-import { requestsRepo, quotationsForRequest, logAudit, auditLogRepo } from '@/lib/repo'
+import { requestsRepo, quotationsForRequest, getAuditLog } from '@/lib/repo'
 import { formatDateTime } from '@/lib/utils'
 import { REQUEST_STATUSES } from '@/lib/types'
 import type { SourcingRequest, RequestStatus } from '@/lib/types'
@@ -20,21 +20,26 @@ export function RequestDetailDrawer({ request, onClose, onUpdate }: { request: S
   const [notes, setNotes] = useState(request?.internalNotes ?? '')
   const [agent, setAgent] = useState(request?.assignedAgent ?? '')
   const [saved, setSaved] = useState(false)
+  const [quotations, setQuotations] = useState<Awaited<ReturnType<typeof quotationsForRequest>>>([])
+  const [activity, setActivity] = useState<Awaited<ReturnType<typeof getAuditLog>>>([])
+
+  useEffect(() => {
+    setNotes(request?.internalNotes ?? '')
+    setAgent(request?.assignedAgent ?? '')
+    if (!request) return
+    quotationsForRequest(request.id).then(setQuotations)
+    getAuditLog().then((log) => setActivity(log.filter((a) => a.entityId === request.id).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))))
+  }, [request])
 
   if (!request) return null
 
-  const quotations = quotationsForRequest(request.id)
-  const activity = auditLogRepo.list().filter((a) => a.entityId === request.id).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
-
-  const updateStatus = (status: RequestStatus) => {
-    requestsRepo.upsert({ ...request, status })
-    logAudit({ entityType: 'request', entityId: request.id, action: `تغيير الحالة إلى: ${REQUEST_STATUSES.find((s) => s.key === status)?.label}`, actor: 'المشرف' })
+  const updateStatus = async (status: RequestStatus) => {
+    await requestsRepo.patch(request.id, { status })
     onUpdate()
   }
 
-  const saveNotes = () => {
-    requestsRepo.upsert({ ...request, internalNotes: notes, assignedAgent: agent || undefined })
-    logAudit({ entityType: 'request', entityId: request.id, action: 'تحديث الملاحظات الداخلية / الوكيل المسؤول', actor: 'المشرف' })
+  const saveNotes = async () => {
+    await requestsRepo.patch(request.id, { internalNotes: notes, assignedAgent: agent || undefined })
     setSaved(true)
     onUpdate()
     setTimeout(() => setSaved(false), 2000)
@@ -87,12 +92,12 @@ export function RequestDetailDrawer({ request, onClose, onUpdate }: { request: S
           </div>
         </Card>
 
-        {request.attachmentIds.length > 0 && (
+        {request.attachments && request.attachments.length > 0 && (
           <div>
             <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-primary">المرفقات</h4>
             <div className="flex flex-wrap gap-3">
-              {request.attachmentIds.map((id) => (
-                <AttachmentPreview key={id} id={id} />
+              {request.attachments.map((att) => (
+                <AttachmentPreview key={att.id} attachment={att} />
               ))}
             </div>
           </div>

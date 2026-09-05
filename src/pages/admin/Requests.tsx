@@ -5,21 +5,20 @@ import { Input, Select } from '@/components/ui/Input'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { requestsRepo } from '@/lib/repo'
-import { useCollectionVersion } from '@/lib/useCollection'
 import { formatDate } from '@/lib/utils'
 import { REQUEST_STATUSES } from '@/lib/types'
 import type { SourcingRequest } from '@/lib/types'
 import { RequestDetailDrawer } from './requests/RequestDetailDrawer'
 
 export default function Requests() {
-  const version = useCollectionVersion()
+  const { data, refetch } = requestsRepo.useList()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
-  const [active, setActive] = useState<SourcingRequest | null>(null)
+  const [activeId, setActiveId] = useState<string | null>(null)
 
-  const data = requestsRepo.list()
+  const active = data.find((r) => r.id === activeId) ?? null
 
   const filtered = useMemo(() => {
     return data.filter((r) => {
@@ -29,8 +28,7 @@ export default function Requests() {
       if (search && !`${r.requestNumber} ${r.name} ${r.company ?? ''} ${r.productName} ${r.email}`.toLowerCase().includes(search.toLowerCase())) return false
       return true
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, search, statusFilter, dateFrom, dateTo, version])
+  }, [data, search, statusFilter, dateFrom, dateTo])
 
   const columns: Column<SourcingRequest>[] = [
     { key: 'requestNumber', header: 'رقم الطلب', render: (r) => <span className="font-mono text-xs">{r.requestNumber}</span>, sortValue: (r) => r.requestNumber },
@@ -64,9 +62,9 @@ export default function Requests() {
         </div>
       </Card>
 
-      <DataTable columns={columns} data={filtered} rowKey={(r) => r.id} onRowClick={setActive} pageSize={10} emptyLabel="لا توجد طلبات مطابقة" />
+      <DataTable columns={columns} data={filtered} rowKey={(r) => r.id} onRowClick={(r) => setActiveId(r.id)} pageSize={10} emptyLabel="لا توجد طلبات مطابقة" />
 
-      <RequestDetailDrawer request={active ? requestsRepo.get(active.id) ?? active : null} onClose={() => setActive(null)} onUpdate={() => setActive((prev) => (prev ? requestsRepo.get(prev.id) ?? prev : prev))} />
+      <RequestDetailDrawer request={active} onClose={() => setActiveId(null)} onUpdate={refetch} />
     </div>
   )
 }

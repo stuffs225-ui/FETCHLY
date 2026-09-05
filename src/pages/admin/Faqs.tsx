@@ -4,23 +4,32 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { FieldLabel, Input, Textarea } from '@/components/ui/Input'
 import { faqsRepo } from '@/lib/repo'
-import { useCollectionVersion } from '@/lib/useCollection'
-import { uid } from '@/lib/utils'
 import type { FaqItem } from '@/lib/types'
 
-function emptyFaq(): FaqItem {
-  return { id: uid('faq'), qAr: '', qEn: '', aAr: '', aEn: '', published: true }
+function emptyFaq(): Partial<FaqItem> {
+  return { qAr: '', qEn: '', aAr: '', aEn: '', published: true }
 }
 
 export default function Faqs() {
-  useCollectionVersion()
-  const [draft, setDraft] = useState<FaqItem | null>(null)
-  const items = faqsRepo.list()
+  const { data: items, refetch } = faqsRepo.useList()
+  const [draft, setDraft] = useState<Partial<FaqItem> | null>(null)
 
-  const save = () => {
+  const save = async () => {
     if (!draft) return
-    faqsRepo.upsert(draft)
+    if (draft.id) await faqsRepo.update(draft.id, draft)
+    else await faqsRepo.create(draft)
     setDraft(null)
+    refetch()
+  }
+
+  const togglePublished = async (f: FaqItem, published: boolean) => {
+    await faqsRepo.update(f.id, { ...f, published })
+    refetch()
+  }
+
+  const remove = async (id: string) => {
+    await faqsRepo.remove(id)
+    refetch()
   }
 
   return (
@@ -37,10 +46,10 @@ export default function Faqs() {
       {draft && (
         <Card className="space-y-4 p-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div><FieldLabel>السؤال (عربي)</FieldLabel><Input value={draft.qAr} onChange={(e) => setDraft({ ...draft, qAr: e.target.value })} /></div>
-            <div><FieldLabel>Question (English)</FieldLabel><Input dir="ltr" value={draft.qEn} onChange={(e) => setDraft({ ...draft, qEn: e.target.value })} /></div>
-            <div><FieldLabel>الإجابة (عربي)</FieldLabel><Textarea value={draft.aAr} onChange={(e) => setDraft({ ...draft, aAr: e.target.value })} /></div>
-            <div><FieldLabel>Answer (English)</FieldLabel><Textarea dir="ltr" value={draft.aEn} onChange={(e) => setDraft({ ...draft, aEn: e.target.value })} /></div>
+            <div><FieldLabel>السؤال (عربي)</FieldLabel><Input value={draft.qAr ?? ''} onChange={(e) => setDraft({ ...draft, qAr: e.target.value })} /></div>
+            <div><FieldLabel>Question (English)</FieldLabel><Input dir="ltr" value={draft.qEn ?? ''} onChange={(e) => setDraft({ ...draft, qEn: e.target.value })} /></div>
+            <div><FieldLabel>الإجابة (عربي)</FieldLabel><Textarea value={draft.aAr ?? ''} onChange={(e) => setDraft({ ...draft, aAr: e.target.value })} /></div>
+            <div><FieldLabel>Answer (English)</FieldLabel><Textarea dir="ltr" value={draft.aEn ?? ''} onChange={(e) => setDraft({ ...draft, aEn: e.target.value })} /></div>
           </div>
           <div className="flex gap-2">
             <Button onClick={save}><Save className="h-4 w-4" /> حفظ</Button>
@@ -56,10 +65,10 @@ export default function Faqs() {
               <p className="font-bold text-text">{f.qAr}</p>
               <div className="flex items-center gap-2">
                 <label className="flex items-center gap-1.5 text-xs text-text-muted">
-                  <input type="checkbox" checked={f.published} onChange={(e) => faqsRepo.upsert({ ...f, published: e.target.checked })} className="h-3.5 w-3.5 accent-primary" />
+                  <input type="checkbox" checked={f.published} onChange={(e) => togglePublished(f, e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
                   منشور
                 </label>
-                <button onClick={() => faqsRepo.remove(f.id)} className="text-text-muted hover:text-danger">
+                <button onClick={() => remove(f.id)} className="text-text-muted hover:text-danger">
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>

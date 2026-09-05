@@ -152,6 +152,8 @@ requestsRouter.get('/:id/attachments/:attachmentId', requireAdmin, (req, res) =>
 })
 
 function attachAttachmentIds(row) {
-  const attachmentIds = db.prepare('SELECT id FROM attachments WHERE requestId = ?').all(row.id).map((r) => r.id)
-  return { ...row, attachmentIds }
+  const attachments = db
+    .prepare('SELECT id, requestId, fileName, mimeType, size, createdAt FROM attachments WHERE requestId = ?')
+    .all(row.id)
+  return { ...row, attachmentIds: attachments.map((a) => a.id), attachments }
 }

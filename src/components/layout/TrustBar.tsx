@@ -1,15 +1,14 @@
 import { ShieldCheck, ExternalLink } from 'lucide-react'
 import { useI18n } from '@/i18n'
-import { credentialsRepo } from '@/lib/repo'
-import { useCollectionVersion } from '@/lib/useCollection'
+import { getPublicCredentials } from '@/lib/repo'
+import { useAsyncData } from '@/lib/useAsync'
 
 /** Only real, configured credentials are ever shown — never a bracket placeholder or "pending" state, in line with not implying an unearned endorsement. */
 export function TrustBar() {
-  useCollectionVersion()
   const { t, locale } = useI18n()
-  const credentials = credentialsRepo.list().filter((c) => c.visible && c.number && c.number.trim() !== '')
+  const { data: credentials } = useAsyncData(getPublicCredentials, [])
 
-  if (credentials.length === 0) return null
+  if (!credentials || credentials.length === 0) return null
 
   return (
     <section className="bg-navy py-12">

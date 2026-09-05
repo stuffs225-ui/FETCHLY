@@ -1,15 +1,14 @@
 import { useI18n } from '@/i18n'
 import { Accordion } from '@/components/ui/Accordion'
-import { faqsRepo } from '@/lib/repo'
-import { useCollectionVersion } from '@/lib/useCollection'
+import { getPublicFaqs } from '@/lib/repo'
+import { useAsyncData } from '@/lib/useAsync'
 import { usePageTitle } from '@/lib/usePageTitle'
 
 export default function Faq() {
-  useCollectionVersion()
   const { t, locale } = useI18n()
   usePageTitle('الأسئلة الشائعة', 'Frequently Asked Questions')
-  const overrides = faqsRepo.list().filter((f) => f.published)
-  const items = overrides.length > 0
+  const { data: overrides } = useAsyncData(getPublicFaqs, [])
+  const items = overrides && overrides.length > 0
     ? overrides.map((f) => ({ q: locale === 'ar' ? f.qAr : f.qEn, a: locale === 'ar' ? f.aAr : f.aEn }))
     : t.faqPage.items
 

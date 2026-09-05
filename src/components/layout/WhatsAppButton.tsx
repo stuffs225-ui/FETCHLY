@@ -1,13 +1,12 @@
 import { MessageCircle } from 'lucide-react'
 import { useI18n } from '@/i18n'
-import { companySettingsStore } from '@/lib/repo'
-import { useCollectionVersion } from '@/lib/useCollection'
+import { getPublicCompany } from '@/lib/repo'
+import { useAsyncData } from '@/lib/useAsync'
 
 export function WhatsAppButton() {
-  useCollectionVersion()
   const { t } = useI18n()
-  const settings = companySettingsStore.get()
-  const phone = settings.whatsapp.replace(/[^\d]/g, '')
+  const { data: settings } = useAsyncData(getPublicCompany, [])
+  const phone = settings?.whatsapp.replace(/[^\d]/g, '') ?? ''
   const href = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(t.whatsapp.message)}` : undefined
 
   if (!href) return null

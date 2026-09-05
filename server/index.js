@@ -7,6 +7,7 @@ import path from 'node:path'
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import multer from 'multer'
+import rateLimit from 'express-rate-limit'
 
 import { bootstrapAdmin } from './db.js'
 import { SqliteSessionStore } from './lib/sqliteSessionStore.js'
@@ -18,6 +19,7 @@ import { publicRouter } from './routes/public.js'
 import { usersRouter } from './routes/users.js'
 import { logsRouter } from './routes/logs.js'
 import { casesRouter, faqsRouter, credentialsRouter, savedProductsRouter, savedTermsRouter } from './routes/cms.js'
+import { contactRouter } from './routes/contact.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 bootstrapAdmin()
@@ -55,8 +57,17 @@ app.use(
   })
 )
 
+const publicWriteLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'too_many_requests' },
+})
+
 app.use('/api/auth', authRouter)
-app.use('/api/requests', requestsRouter)
+app.use('/api/requests', (req, res, next) => (req.method === 'POST' ? publicWriteLimiter(req, res, next) : next()), requestsRouter)
+app.use('/api/contact', publicWriteLimiter, contactRouter)
 app.use('/api/quotations', quotationsRouter)
 app.use('/api/settings', settingsRouter)
 app.use('/api/public', publicRouter)

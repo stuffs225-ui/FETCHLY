@@ -1,19 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Plus, Trash2, Eye, Download, Send, Copy, CheckCircle2, ArrowRight, ArrowLeft } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { FieldLabel, Input, Select, Textarea } from '@/components/ui/Input'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { QuotationPrintTemplate } from '@/components/admin/QuotationPrintTemplate'
 import {
-  quotationsRepo, requestsRepo, savedProductsRepo, savedTermsRepo, companySettingsStore, emailSettingsStore,
-  nextQuotationNumber, revisionsForBase, logAudit,
+  quotationsRepo, requestsRepo, savedProductsRepo, savedTermsRepo,
+  getCompanySettings, quotationsForRequest, sendQuotation, reviseQuotation,
+  getQuotationEmailPreview, quotationPdfUrl,
 } from '@/lib/repo'
-import { elementToPdfBlob, downloadBlob, openBlobInNewTab } from '@/lib/pdf'
-import { renderTemplate, sendEmail } from '@/lib/emailService'
+import { useAsyncData } from '@/lib/useAsync'
 import { uid, formatDate, formatMoney } from '@/lib/utils'
-import type { Quotation, QuotationItem, SourcingRequest } from '@/lib/types'
+import type { Quotation, QuotationItem, SourcingRequest, CompanySettings } from '@/lib/types'
 
 function addDays(days: number) {
   const d = new Date()
@@ -21,21 +20,13 @@ function addDays(days: number) {
   return d.toISOString().slice(0, 10)
 }
 
-function blankQuotation(request: SourcingRequest | null): Quotation {
-  const company = companySettingsStore.get()
-  const number = nextQuotationNumber()
+function blankQuotationPayload(request: SourcingRequest | null, company: CompanySettings): Partial<Quotation> {
   return {
-    id: uid('quo'),
-    quotationNumber: number,
-    baseNumber: number,
-    revision: 0,
     requestId: request?.id ?? '',
-    createdAt: new Date().toISOString(),
     validUntilDays: 15,
     validUntilDate: addDays(15),
     currency: company.defaultCurrency,
     language: 'ar',
-    status: 'draft',
     customerName: request?.name ?? '',
     customerCompany: request?.company,
     customerEmail: request?.email ?? '',
@@ -55,6 +46,15 @@ function blankQuotation(request: SourcingRequest | null): Quotation {
   }
 }
 
+function downloadUrl(url: string, fileName: string) {
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+}
+
 export default function QuotationEditor() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
@@ -62,42 +62,79 @@ export default function QuotationEditor() {
   const requestId = searchParams.get('requestId')
   const isNew = id === 'new' || !id
 
-  const [quotation, setQuotation] = useState<Quotation>(() => {
-    if (!isNew && id) {
-      const existing = quotationsRepo.get(id)
-      if (existing) return existing
-    }
-    const request = requestId ? requestsRepo.get(requestId) ?? null : null
-    return blankQuotation(request)
-  })
+  const { data: company } = useAsyncData(getCompanySettings, [])
+  const { data: savedProducts, refetch: refetchSavedProducts } = savedProductsRepo.useList()
+  const { data: savedTerms } = savedTermsRepo.useList()
+
+  const [quotation, setQuotation] = useState<Quotation | null>(null)
+  const [request, setRequest] = useState<SourcingRequest | null>(null)
+  const [revisions, setRevisions] = useState<Quotation[]>([])
   const [saved, setSaved] = useState(false)
   const [sending, setSending] = useState(false)
   const [sendPanel, setSendPanel] = useState(false)
   const [emailSubject, setEmailSubject] = useState('')
   const [emailBody, setEmailBody] = useState('')
-  const printRef = useRef<HTMLDivElement>(null)
 
-  const request = quotation.requestId ? requestsRepo.get(quotation.requestId) : undefined
-  const company = companySettingsStore.get()
-  const savedProducts = savedProductsRepo.list()
-  const savedTerms = savedTermsRepo.list()
-  const revisions = revisionsForBase(quotation.baseNumber)
+  // Load an existing quotation.
+  useEffect(() => {
+    if (isNew || !id) return
+    let cancelled = false
+    quotationsRepo.get(id).then(async (existing) => {
+      if (cancelled) return
+      setQuotation(existing)
+      if (existing.requestId) {
+        const [req, related] = await Promise.all([
+          requestsRepo.get(existing.requestId).catch(() => null),
+          quotationsForRequest(existing.requestId).catch(() => []),
+        ])
+        if (cancelled) return
+        setRequest(req)
+        setRevisions(related.filter((q) => q.baseNumber === existing.baseNumber).sort((a, b) => a.revision - b.revision))
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [isNew, id])
+
+  // Create a brand-new draft on the server as soon as we land on /new, so it gets a real
+  // quotation number immediately instead of faking one client-side.
+  useEffect(() => {
+    if (!isNew || !company || quotation) return
+    let cancelled = false
+    ;(async () => {
+      const req = requestId ? await requestsRepo.get(requestId).catch(() => null) : null
+      if (cancelled) return
+      setRequest(req)
+      const created = await quotationsRepo.create(blankQuotationPayload(req, company))
+      if (cancelled) return
+      setQuotation(created)
+      navigate(`/admin/quotations/${created.id}`, { replace: true })
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isNew, company, quotation, requestId, navigate])
 
   useEffect(() => {
-    document.title = `${quotation.quotationNumber} — عرض سعر`
-  }, [quotation.quotationNumber])
+    if (quotation) document.title = `${quotation.quotationNumber} — عرض سعر`
+  }, [quotation])
 
-  const subtotal = useMemo(() => quotation.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0), [quotation.items])
-  const vat = quotation.vatEnabled ? subtotal * (quotation.vatRate / 100) : 0
+  const subtotal = useMemo(() => quotation?.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0) ?? 0, [quotation])
+  const vat = quotation?.vatEnabled ? subtotal * (quotation.vatRate / 100) : 0
   const grandTotal = subtotal + vat
 
-  const update = <K extends keyof Quotation>(key: K, value: Quotation[K]) => setQuotation((q) => ({ ...q, [key]: value }))
+  if (!quotation) {
+    return <p className="text-sm text-text-muted">جارٍ التحميل...</p>
+  }
+
+  const update = <K extends keyof Quotation>(key: K, value: Quotation[K]) => setQuotation((q) => q && { ...q, [key]: value })
 
   const updateItem = (itemId: string, patch: Partial<QuotationItem>) => {
-    setQuotation((q) => ({ ...q, items: q.items.map((i) => (i.id === itemId ? { ...i, ...patch } : i)) }))
+    setQuotation((q) => q && { ...q, items: q.items.map((i) => (i.id === itemId ? { ...i, ...patch } : i)) })
   }
-  const addItem = () => setQuotation((q) => ({ ...q, items: [...q.items, { id: uid('item'), name: '', description: '', quantity: 1, unitPrice: 0 }] }))
-  const removeItem = (itemId: string) => setQuotation((q) => ({ ...q, items: q.items.filter((i) => i.id !== itemId) }))
+  const addItem = () => setQuotation((q) => q && { ...q, items: [...q.items, { id: uid('item'), name: '', description: '', quantity: 1, unitPrice: 0 }] })
+  const removeItem = (itemId: string) => setQuotation((q) => q && { ...q, items: q.items.filter((i) => i.id !== itemId) })
 
   const applySavedProduct = (itemId: string, name: string) => {
     const match = savedProducts.find((p) => p.name === name)
@@ -117,55 +154,41 @@ export default function QuotationEditor() {
     }
   }
 
-  const persist = (next: Quotation, auditAction: string) => {
-    quotationsRepo.upsert(next)
-    // Save/refresh saved-product entries for reuse in future quotations
-    next.items.forEach((item) => {
-      if (!item.name.trim()) return
+  const persist = async (): Promise<Quotation> => {
+    const updated = await quotationsRepo.update(quotation.id, quotation)
+    setQuotation(updated)
+    for (const item of updated.items) {
+      if (!item.name.trim()) continue
       const existing = savedProducts.find((p) => p.name === item.name)
-      savedProductsRepo.upsert({
-        id: existing?.id ?? uid('sp'),
-        name: item.name,
-        description: item.description,
-        lastPrice: item.unitPrice,
-        currency: next.currency,
-        lastQuotedAt: new Date().toISOString(),
-      })
-    })
-    logAudit({ entityType: 'quotation', entityId: next.id, action: auditAction, actor: 'المشرف' })
+      if (existing) {
+        await savedProductsRepo.update(existing.id, { ...existing, description: item.description, lastPrice: item.unitPrice, currency: updated.currency, lastQuotedAt: new Date().toISOString() })
+      } else {
+        await savedProductsRepo.create({ name: item.name, description: item.description, lastPrice: item.unitPrice, currency: updated.currency, lastQuotedAt: new Date().toISOString() })
+      }
+    }
+    refetchSavedProducts()
+    return updated
   }
 
-  const handleSaveDraft = () => {
-    persist(quotation, 'تم حفظ المسودة')
+  const handleSaveDraft = async () => {
+    await persist()
     setSaved(true)
-    if (isNew) navigate(`/admin/quotations/${quotation.id}`, { replace: true })
     setTimeout(() => setSaved(false), 2000)
   }
 
-  const buildPdf = async () => {
-    if (!printRef.current) return null
-    return elementToPdfBlob(printRef.current)
-  }
-
   const handlePreview = async () => {
-    const blob = await buildPdf()
-    if (blob) openBlobInNewTab(blob)
+    await persist()
+    window.open(quotationPdfUrl(quotation.id), '_blank')
   }
 
   const handleDownload = async () => {
-    const blob = await buildPdf()
-    if (blob) downloadBlob(blob, `${quotation.quotationNumber}.pdf`)
+    await persist()
+    downloadUrl(quotationPdfUrl(quotation.id), `${quotation.quotationNumber}.pdf`)
   }
 
-  const openSendPanel = () => {
-    const emailSettings = emailSettingsStore.get()
-    const template = quotation.language === 'ar' ? emailSettings.quoteTemplateAr : emailSettings.quoteTemplateEn
-    const rendered = renderTemplate(template.subject, template.body, {
-      name: quotation.customerName,
-      requestNumber: request?.requestNumber ?? '',
-      quotationNumber: quotation.quotationNumber,
-      validUntil: formatDate(quotation.validUntilDate, quotation.language),
-    })
+  const openSendPanel = async () => {
+    await persist()
+    const rendered = await getQuotationEmailPreview(quotation.id)
     setEmailSubject(rendered.subject)
     setEmailBody(rendered.body)
     setSendPanel(true)
@@ -173,41 +196,21 @@ export default function QuotationEditor() {
 
   const handleSend = async () => {
     setSending(true)
-    const blob = await buildPdf()
-    await sendEmail({
-      to: quotation.customerEmail,
-      subject: emailSubject,
-      body: emailBody,
-      kind: 'quotation',
-      relatedId: quotation.id,
-      attachmentName: `${quotation.quotationNumber}.pdf`,
-    })
-    const sentQuotation: Quotation = { ...quotation, status: 'sent', sentAt: new Date().toISOString() }
-    persist(sentQuotation, 'تم إرسال عرض السعر للعميل')
-    setQuotation(sentQuotation)
-    if (request) {
-      requestsRepo.upsert({ ...request, status: 'quote_sent' })
-      logAudit({ entityType: 'request', entityId: request.id, action: `تم إرسال عرض السعر ${quotation.quotationNumber}`, actor: 'المشرف' })
+    try {
+      await persist()
+      const sent = await sendQuotation(quotation.id, { subject: emailSubject, body: emailBody })
+      setQuotation(sent)
+      if (request) setRequest({ ...request, status: 'quote_sent' })
+      downloadUrl(quotationPdfUrl(quotation.id), `${quotation.quotationNumber}.pdf`)
+      setSendPanel(false)
+    } finally {
+      setSending(false)
     }
-    if (blob) downloadBlob(blob, `${quotation.quotationNumber}.pdf`)
-    setSending(false)
-    setSendPanel(false)
   }
 
-  const handleCreateRevision = () => {
-    const nextRevisionNum = Math.max(0, ...revisions.map((r) => r.revision)) + 1
-    const revised: Quotation = {
-      ...quotation,
-      id: uid('quo'),
-      quotationNumber: `${quotation.baseNumber}-R${nextRevisionNum}`,
-      revision: nextRevisionNum,
-      createdAt: new Date().toISOString(),
-      sentAt: undefined,
-      status: 'draft',
-      validUntilDate: quotation.validUntilDays === 'custom' ? quotation.validUntilDate : addDays(quotation.validUntilDays),
-    }
-    quotationsRepo.upsert(revised)
-    logAudit({ entityType: 'quotation', entityId: revised.id, action: `تم إنشاء نسخة معدّلة من ${quotation.quotationNumber}`, actor: 'المشرف' })
+  const handleCreateRevision = async () => {
+    await persist()
+    const revised = await reviseQuotation(quotation.id)
     navigate(`/admin/quotations/${revised.id}`)
   }
 
@@ -253,7 +256,7 @@ export default function QuotationEditor() {
             <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
                 <FieldLabel>رقم العرض</FieldLabel>
-                <Input value={quotation.quotationNumber} onChange={(e) => update('quotationNumber', e.target.value)} className="font-mono" />
+                <p className="rounded-lg border border-border-light bg-surface px-3 py-2 font-mono text-sm text-text-muted">{quotation.quotationNumber}</p>
               </div>
               <div>
                 <FieldLabel>لغة العرض</FieldLabel>
@@ -384,7 +387,7 @@ export default function QuotationEditor() {
                 <Textarea className="mt-2" value={quotation.paymentTerms ?? ''} onChange={(e) => update('paymentTerms', e.target.value)} />
               </div>
               <div>
-                <FieldLabel>الضمان ({/*optional*/}اختياري)</FieldLabel>
+                <FieldLabel>الضمان (اختياري)</FieldLabel>
                 <Input value={quotation.warranty ?? ''} onChange={(e) => update('warranty', e.target.value)} />
               </div>
               <div>
@@ -470,11 +473,6 @@ export default function QuotationEditor() {
             </Card>
           )}
         </div>
-      </div>
-
-      {/* Hidden print target for PDF generation */}
-      <div style={{ position: 'fixed', top: 0, insetInlineStart: '-9999px', zIndex: -1 }}>
-        <QuotationPrintTemplate ref={printRef} quotation={quotation} company={company} />
       </div>
     </div>
   )

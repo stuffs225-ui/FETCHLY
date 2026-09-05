@@ -15,8 +15,8 @@ import RequestPage from '@/pages/public/RequestPage'
 import NotFound from '@/pages/public/NotFound'
 import LegalPage from '@/pages/legal/LegalPage'
 
-// Admin pulls in jsPDF/html2canvas and the whole back-office UI — keep it out
-// of the public bundle entirely via lazy loading.
+// Admin pulls in the whole back-office UI — keep it out of the public
+// bundle entirely via lazy loading.
 const AdminLayout = lazy(() => import('@/components/layout/AdminLayout'))
 const Dashboard = lazy(() => import('@/pages/admin/Dashboard'))
 const Requests = lazy(() => import('@/pages/admin/Requests'))

@@ -4,36 +4,52 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { FieldLabel, Input, Select } from '@/components/ui/Input'
 import { credentialsRepo } from '@/lib/repo'
-import { useCollectionVersion } from '@/lib/useCollection'
-import { putAttachment } from '@/lib/attachments'
-import { uid } from '@/lib/utils'
 import type { Credential, CredentialKey } from '@/lib/types'
 
 const keyLabels: Record<CredentialKey, string> = {
   cr: 'السجل التجاري', sbc: 'توثيق منصة الأعمال', vat: 'ضريبة القيمة المضافة', zakat: 'شهادة الزكاة', address: 'العنوان الوطني', balady: 'رخصة بلدي', iso: 'أيزو', other: 'أخرى',
 }
 
-function emptyCredential(): Credential {
-  return { id: uid('cred'), key: 'other', labelAr: '', labelEn: '', visible: true }
+function emptyCredential(): Partial<Credential> {
+  return { key: 'other', labelAr: '', labelEn: '', visible: true }
+}
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
 }
 
 export default function Trust() {
-  useCollectionVersion()
-  const [draft, setDraft] = useState<Credential | null>(null)
+  const { data: credentials, refetch } = credentialsRepo.useList()
+  const [draft, setDraft] = useState<Partial<Credential> | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
-  const credentials = credentialsRepo.list()
 
-  const save = () => {
+  const save = async () => {
     if (!draft) return
-    credentialsRepo.upsert(draft)
+    if (draft.id) await credentialsRepo.update(draft.id, draft)
+    else await credentialsRepo.create(draft)
     setDraft(null)
+    refetch()
   }
 
   const uploadDoc = async (file: File | undefined) => {
     if (!file || !draft) return
-    const id = uid('att')
-    await putAttachment({ id, requestId: draft.id, fileName: file.name, mimeType: file.type, size: file.size, blob: file, createdAt: new Date().toISOString() })
-    setDraft({ ...draft, documentAttachmentId: id })
+    const documentDataUrl = await fileToDataUrl(file)
+    setDraft({ ...draft, documentDataUrl })
+  }
+
+  const toggleVisible = async (c: Credential, visible: boolean) => {
+    await credentialsRepo.update(c.id, { ...c, visible })
+    refetch()
+  }
+
+  const remove = async (id: string) => {
+    await credentialsRepo.remove(id)
+    refetch()
   }
 
   return (
@@ -55,8 +71,8 @@ export default function Trust() {
                 ))}
               </Select>
             </div>
-            <div><FieldLabel>التسمية (عربي)</FieldLabel><Input value={draft.labelAr} onChange={(e) => setDraft({ ...draft, labelAr: e.target.value })} /></div>
-            <div><FieldLabel>Label (English)</FieldLabel><Input dir="ltr" value={draft.labelEn} onChange={(e) => setDraft({ ...draft, labelEn: e.target.value })} /></div>
+            <div><FieldLabel>التسمية (عربي)</FieldLabel><Input value={draft.labelAr ?? ''} onChange={(e) => setDraft({ ...draft, labelAr: e.target.value })} /></div>
+            <div><FieldLabel>Label (English)</FieldLabel><Input dir="ltr" value={draft.labelEn ?? ''} onChange={(e) => setDraft({ ...draft, labelEn: e.target.value })} /></div>
             <div><FieldLabel>الجهة المصدرة</FieldLabel><Input value={draft.authority ?? ''} onChange={(e) => setDraft({ ...draft, authority: e.target.value })} /></div>
             <div><FieldLabel>الرقم</FieldLabel><Input dir="ltr" value={draft.number ?? ''} onChange={(e) => setDraft({ ...draft, number: e.target.value })} /></div>
             <div><FieldLabel>تاريخ الإصدار</FieldLabel><Input type="date" value={draft.issuedDate ?? ''} onChange={(e) => setDraft({ ...draft, issuedDate: e.target.value })} /></div>
@@ -68,10 +84,10 @@ export default function Trust() {
               <Upload className="h-3.5 w-3.5" /> رفع المستند
             </Button>
             <input ref={fileInput} type="file" accept="image/*,application/pdf" className="hidden" onChange={(e) => uploadDoc(e.target.files?.[0])} />
-            {draft.documentAttachmentId && <span className="text-xs text-emerald">تم رفع المستند</span>}
+            {draft.documentDataUrl && <span className="text-xs text-emerald">تم رفع المستند</span>}
           </div>
           <label className="flex items-center gap-2 text-sm text-text-muted">
-            <input type="checkbox" checked={draft.visible} onChange={(e) => setDraft({ ...draft, visible: e.target.checked })} className="h-4 w-4 accent-primary" />
+            <input type="checkbox" checked={draft.visible ?? true} onChange={(e) => setDraft({ ...draft, visible: e.target.checked })} className="h-4 w-4 accent-primary" />
             عرض في الموقع العام
           </label>
           <div className="flex gap-2">
@@ -92,10 +108,10 @@ export default function Trust() {
               </div>
               <div className="flex items-center gap-2">
                 <label className="flex items-center gap-1.5 text-xs text-text-muted">
-                  <input type="checkbox" checked={c.visible} onChange={(e) => credentialsRepo.upsert({ ...c, visible: e.target.checked })} className="h-3.5 w-3.5 accent-primary" />
+                  <input type="checkbox" checked={c.visible} onChange={(e) => toggleVisible(c, e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
                   ظاهر
                 </label>
-                <button onClick={() => credentialsRepo.remove(c.id)} className="text-text-muted hover:text-danger">
+                <button onClick={() => remove(c.id)} className="text-text-muted hover:text-danger">
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>

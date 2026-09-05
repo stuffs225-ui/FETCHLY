@@ -4,14 +4,12 @@ import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { quotationsRepo } from '@/lib/repo'
-import { useCollectionVersion } from '@/lib/useCollection'
 import { formatDate, formatMoney } from '@/lib/utils'
 import type { Quotation } from '@/lib/types'
 
 export default function Quotations() {
-  useCollectionVersion()
   const navigate = useNavigate()
-  const data = [...quotationsRepo.list()].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+  const { data } = quotationsRepo.useList()
 
   const total = (q: Quotation) => {
     const subtotal = q.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)

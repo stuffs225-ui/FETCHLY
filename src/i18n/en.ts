@@ -177,6 +177,7 @@ export const en: Dict = {
       fileSize: 'File exceeds the maximum allowed size (10MB)',
       fileType: 'Unsupported file type',
       maxFiles: 'Maximum 5 files',
+      submitFailed: 'Could not submit the request. Please try again.',
     },
     success: {
       title: 'Your request has been received.',

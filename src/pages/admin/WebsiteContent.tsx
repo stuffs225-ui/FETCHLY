@@ -1,21 +1,30 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Save, CheckCircle2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { FieldLabel, Textarea } from '@/components/ui/Input'
-import { contentOverridesStore, type ContentOverrides } from '@/lib/repo'
+import { getContentOverrides, updateContentOverrides, type ContentOverrides } from '@/lib/repo'
+import { useAsyncData } from '@/lib/useAsync'
 import { ar } from '@/i18n/ar'
 import { en } from '@/i18n/en'
 
 export default function WebsiteContent() {
-  const [content, setContent] = useState<ContentOverrides>(contentOverridesStore.get())
+  const { data: initial } = useAsyncData(getContentOverrides, [])
+  const [content, setContent] = useState<ContentOverrides | null>(null)
   const [saved, setSaved] = useState(false)
 
-  const save = () => {
-    contentOverridesStore.set(content)
+  useEffect(() => {
+    if (initial && !content) setContent(initial)
+  }, [initial, content])
+
+  const save = async () => {
+    if (!content) return
+    await updateContentOverrides(content)
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
+
+  if (!content) return null
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -28,11 +37,11 @@ export default function WebsiteContent() {
         <div className="mt-4 space-y-4">
           <div>
             <FieldLabel>العنوان (افتراضي: {ar.hero.headline})</FieldLabel>
-            <Textarea value={content.heroHeadlineAr} onChange={(e) => setContent((c) => ({ ...c, heroHeadlineAr: e.target.value }))} />
+            <Textarea value={content.heroHeadlineAr} onChange={(e) => setContent((c) => c && { ...c, heroHeadlineAr: e.target.value })} />
           </div>
           <div>
             <FieldLabel>الوصف الفرعي (افتراضي: {ar.hero.sub})</FieldLabel>
-            <Textarea value={content.heroSubAr} onChange={(e) => setContent((c) => ({ ...c, heroSubAr: e.target.value }))} />
+            <Textarea value={content.heroSubAr} onChange={(e) => setContent((c) => c && { ...c, heroSubAr: e.target.value })} />
           </div>
         </div>
       </Card>
@@ -42,11 +51,11 @@ export default function WebsiteContent() {
         <div className="mt-4 space-y-4">
           <div>
             <FieldLabel>Headline (default: {en.hero.headline})</FieldLabel>
-            <Textarea dir="ltr" value={content.heroHeadlineEn} onChange={(e) => setContent((c) => ({ ...c, heroHeadlineEn: e.target.value }))} />
+            <Textarea dir="ltr" value={content.heroHeadlineEn} onChange={(e) => setContent((c) => c && { ...c, heroHeadlineEn: e.target.value })} />
           </div>
           <div>
             <FieldLabel>Sub-headline (default: {en.hero.sub})</FieldLabel>
-            <Textarea dir="ltr" value={content.heroSubEn} onChange={(e) => setContent((c) => ({ ...c, heroSubEn: e.target.value }))} />
+            <Textarea dir="ltr" value={content.heroSubEn} onChange={(e) => setContent((c) => c && { ...c, heroSubEn: e.target.value })} />
           </div>
         </div>
       </Card>

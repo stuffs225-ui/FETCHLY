@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet, useLocation, Navigate } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
 import AdminSidebar from './AdminSidebar'
 import AdminTopbar from './AdminTopbar'
 import AdminLogin from '@/pages/admin/AdminLogin'
-import { isAuthed, login, logout } from '@/lib/adminAuth'
+import { fetchCurrentUser, logout as apiLogout, type AdminSessionUser } from '@/lib/adminAuth'
 import { cn } from '@/lib/utils'
 
 const titles: Record<string, string> = {
@@ -22,18 +22,27 @@ const titles: Record<string, string> = {
 }
 
 export default function AdminLayout() {
-  const [authed, setAuthed] = useState(isAuthed)
+  const [user, setUser] = useState<AdminSessionUser | null>(null)
+  const [checkingSession, setCheckingSession] = useState(true)
   const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
 
-  const handleLogin = (pw: string) => {
-    const ok = login(pw)
-    if (ok) setAuthed(true)
-    return ok
+  useEffect(() => {
+    fetchCurrentUser()
+      .then(setUser)
+      .finally(() => setCheckingSession(false))
+  }, [])
+
+  const handleLogout = () => {
+    apiLogout().finally(() => setUser(null))
   }
 
-  if (!authed) {
-    return <AdminLogin onLogin={handleLogin} />
+  if (checkingSession) {
+    return <div className="flex min-h-screen items-center justify-center bg-surface text-sm text-text-muted">جارٍ التحميل...</div>
+  }
+
+  if (!user) {
+    return <AdminLogin onLogin={setUser} />
   }
 
   if (location.pathname === '/admin' || location.pathname === '/admin/') {
@@ -44,23 +53,13 @@ export default function AdminLayout() {
 
   return (
     <div dir="rtl" lang="ar" className="flex min-h-screen bg-ink">
-      <AdminSidebar
-        onLogout={() => {
-          logout()
-          setAuthed(false)
-        }}
-      />
+      <AdminSidebar onLogout={handleLogout} />
 
       {/* mobile drawer */}
       <div className={cn('fixed inset-0 z-50 lg:hidden', mobileOpen ? 'pointer-events-auto' : 'pointer-events-none')}>
         <div onClick={() => setMobileOpen(false)} className={cn('absolute inset-0 bg-black/60 transition-opacity', mobileOpen ? 'opacity-100' : 'opacity-0')} />
         <div className={cn('absolute inset-y-0 start-0 w-64 bg-surface transition-transform', mobileOpen ? 'translate-x-0' : 'rtl:translate-x-[-100%] ltr:translate-x-[-100%]')}>
-          <AdminSidebar
-            onLogout={() => {
-              logout()
-              setAuthed(false)
-            }}
-          />
+          <AdminSidebar onLogout={handleLogout} />
         </div>
       </div>
 

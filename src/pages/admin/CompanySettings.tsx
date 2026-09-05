@@ -1,9 +1,10 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Save, Upload, CheckCircle2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { FieldLabel, Input, Select, Textarea } from '@/components/ui/Input'
-import { companySettingsStore } from '@/lib/repo'
+import { getCompanySettings, updateCompanySettings } from '@/lib/repo'
+import { useAsyncData } from '@/lib/useAsync'
 import type { CompanySettings } from '@/lib/types'
 
 function fileToDataUrl(file: File): Promise<string> {
@@ -16,12 +17,17 @@ function fileToDataUrl(file: File): Promise<string> {
 }
 
 export default function CompanySettingsPage() {
-  const [settings, setSettings] = useState<CompanySettings>(companySettingsStore.get())
+  const { data: initial } = useAsyncData(getCompanySettings, [])
+  const [settings, setSettings] = useState<CompanySettings | null>(null)
   const [saved, setSaved] = useState(false)
   const logoInput = useRef<HTMLInputElement>(null)
   const logoArInput = useRef<HTMLInputElement>(null)
 
-  const update = <K extends keyof CompanySettings>(key: K, value: CompanySettings[K]) => setSettings((s) => ({ ...s, [key]: value }))
+  useEffect(() => {
+    if (initial && !settings) setSettings(initial)
+  }, [initial, settings])
+
+  const update = <K extends keyof CompanySettings>(key: K, value: CompanySettings[K]) => setSettings((s) => s && { ...s, [key]: value })
 
   const handleLogo = async (file: File | undefined, key: 'logoDataUrl' | 'logoArDataUrl') => {
     if (!file) return
@@ -29,11 +35,14 @@ export default function CompanySettingsPage() {
     update(key, dataUrl)
   }
 
-  const handleSave = () => {
-    companySettingsStore.set(settings)
+  const handleSave = async () => {
+    if (!settings) return
+    await updateCompanySettings(settings)
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
+
+  if (!settings) return null
 
   return (
     <div className="max-w-4xl space-y-6">

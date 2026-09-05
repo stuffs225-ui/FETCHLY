@@ -4,23 +4,32 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { FieldLabel, Input } from '@/components/ui/Input'
 import { casesRepo } from '@/lib/repo'
-import { useCollectionVersion } from '@/lib/useCollection'
-import { uid } from '@/lib/utils'
 import type { SourcingCase } from '@/lib/types'
 
-function emptyCase(): SourcingCase {
-  return { id: uid('case'), titleAr: '', titleEn: '', sourceAr: '', sourceEn: '', challengeAr: '', challengeEn: '', solutionAr: '', solutionEn: '', published: true }
+function emptyCase(): Partial<SourcingCase> {
+  return { titleAr: '', titleEn: '', sourceAr: '', sourceEn: '', challengeAr: '', challengeEn: '', solutionAr: '', solutionEn: '', published: true }
 }
 
 export default function Cases() {
-  useCollectionVersion()
-  const [draft, setDraft] = useState<SourcingCase | null>(null)
-  const cases = casesRepo.list()
+  const { data: cases, refetch } = casesRepo.useList()
+  const [draft, setDraft] = useState<Partial<SourcingCase> | null>(null)
 
-  const save = () => {
+  const save = async () => {
     if (!draft) return
-    casesRepo.upsert(draft)
+    if (draft.id) await casesRepo.update(draft.id, draft)
+    else await casesRepo.create(draft)
     setDraft(null)
+    refetch()
+  }
+
+  const togglePublished = async (c: SourcingCase, published: boolean) => {
+    await casesRepo.update(c.id, { ...c, published })
+    refetch()
+  }
+
+  const remove = async (id: string) => {
+    await casesRepo.remove(id)
+    refetch()
   }
 
   return (
@@ -34,10 +43,10 @@ export default function Cases() {
       {draft && (
         <Card className="space-y-4 p-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div><FieldLabel>العنوان (عربي)</FieldLabel><Input value={draft.titleAr} onChange={(e) => setDraft({ ...draft, titleAr: e.target.value })} /></div>
-            <div><FieldLabel>العنوان (إنجليزي)</FieldLabel><Input dir="ltr" value={draft.titleEn} onChange={(e) => setDraft({ ...draft, titleEn: e.target.value })} /></div>
-            <div><FieldLabel>المصدر (عربي)</FieldLabel><Input value={draft.sourceAr} onChange={(e) => setDraft({ ...draft, sourceAr: e.target.value })} /></div>
-            <div><FieldLabel>المصدر (إنجليزي)</FieldLabel><Input dir="ltr" value={draft.sourceEn} onChange={(e) => setDraft({ ...draft, sourceEn: e.target.value })} /></div>
+            <div><FieldLabel>العنوان (عربي)</FieldLabel><Input value={draft.titleAr ?? ''} onChange={(e) => setDraft({ ...draft, titleAr: e.target.value })} /></div>
+            <div><FieldLabel>العنوان (إنجليزي)</FieldLabel><Input dir="ltr" value={draft.titleEn ?? ''} onChange={(e) => setDraft({ ...draft, titleEn: e.target.value })} /></div>
+            <div><FieldLabel>المصدر (عربي)</FieldLabel><Input value={draft.sourceAr ?? ''} onChange={(e) => setDraft({ ...draft, sourceAr: e.target.value })} /></div>
+            <div><FieldLabel>المصدر (إنجليزي)</FieldLabel><Input dir="ltr" value={draft.sourceEn ?? ''} onChange={(e) => setDraft({ ...draft, sourceEn: e.target.value })} /></div>
             <div><FieldLabel>التحدي (عربي، اختياري)</FieldLabel><Input value={draft.challengeAr ?? ''} onChange={(e) => setDraft({ ...draft, challengeAr: e.target.value })} /></div>
             <div><FieldLabel>Challenge (English, optional)</FieldLabel><Input dir="ltr" value={draft.challengeEn ?? ''} onChange={(e) => setDraft({ ...draft, challengeEn: e.target.value })} /></div>
             <div><FieldLabel>الحل (عربي، اختياري)</FieldLabel><Input value={draft.solutionAr ?? ''} onChange={(e) => setDraft({ ...draft, solutionAr: e.target.value })} /></div>
@@ -60,10 +69,10 @@ export default function Cases() {
               </div>
               <div className="flex items-center gap-2">
                 <label className="flex items-center gap-1.5 text-xs text-text-muted">
-                  <input type="checkbox" checked={c.published} onChange={(e) => casesRepo.upsert({ ...c, published: e.target.checked })} className="h-3.5 w-3.5 accent-primary" />
+                  <input type="checkbox" checked={c.published} onChange={(e) => togglePublished(c, e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
                   منشور
                 </label>
-                <button onClick={() => casesRepo.remove(c.id)} className="text-text-muted hover:text-danger">
+                <button onClick={() => remove(c.id)} className="text-text-muted hover:text-danger">
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>

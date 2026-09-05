@@ -159,6 +159,25 @@ quotationsRouter.get('/:id/pdf', async (req, res) => {
   }
 })
 
+function renderQuoteEmail(row, emailSettings, requestRow) {
+  const template = row.language === 'ar' ? JSON.parse(emailSettings.quoteTemplateArJson) : JSON.parse(emailSettings.quoteTemplateEnJson)
+  const vars = {
+    name: row.customerName,
+    requestNumber: requestRow?.requestNumber ?? '',
+    quotationNumber: row.quotationNumber,
+    validUntil: row.validUntilDate,
+  }
+  return { subject: fillTemplate(template.subject, vars), body: fillTemplate(template.body, vars) }
+}
+
+quotationsRouter.get('/:id/email-preview', (req, res) => {
+  const row = db.prepare('SELECT * FROM quotations WHERE id = ?').get(req.params.id)
+  if (!row) return res.status(404).json({ error: 'not_found' })
+  const emailSettings = db.prepare('SELECT * FROM emailSettings WHERE id = 1').get()
+  const requestRow = db.prepare('SELECT requestNumber FROM requests WHERE id = ?').get(row.requestId)
+  res.json(renderQuoteEmail(row, emailSettings, requestRow))
+})
+
 quotationsRouter.post('/:id/send', async (req, res) => {
   const row = db.prepare('SELECT * FROM quotations WHERE id = ?').get(req.params.id)
   if (!row) return res.status(404).json({ error: 'not_found' })
@@ -174,18 +193,14 @@ quotationsRouter.post('/:id/send', async (req, res) => {
     return res.status(500).json({ error: 'pdf_render_failed' })
   }
 
-  const template = row.language === 'ar' ? JSON.parse(emailSettings.quoteTemplateArJson) : JSON.parse(emailSettings.quoteTemplateEnJson)
-  const vars = {
-    name: row.customerName,
-    requestNumber: requestRow?.requestNumber ?? '',
-    quotationNumber: row.quotationNumber,
-    validUntil: row.validUntilDate,
-  }
+  const rendered = renderQuoteEmail(row, emailSettings, requestRow)
+  const subject = req.body?.subject?.trim() || rendered.subject
+  const body = req.body?.body?.trim() || rendered.body
 
   const emailResult = await sendEmail({
     to: row.customerEmail,
-    subject: fillTemplate(template.subject, vars),
-    body: fillTemplate(template.body, vars),
+    subject,
+    body,
     kind: 'quotation',
     relatedId: row.id,
     attachmentName: `${row.quotationNumber}.pdf`,

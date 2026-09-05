@@ -2,16 +2,15 @@ import { BadgeCheck } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import { Button } from '@/components/ui/Button'
 import { DirArrow } from '@/components/ui/DirArrow'
-import { credentialsRepo } from '@/lib/repo'
-import { useCollectionVersion } from '@/lib/useCollection'
+import { getPublicCredentials } from '@/lib/repo'
+import { useAsyncData } from '@/lib/useAsync'
 
 /** Real Saudi trust indicators — the whole section stays hidden until at least one credential has real data configured in Admin. Never shows a placeholder or "pending" state publicly. */
 export default function TrustSection() {
-  useCollectionVersion()
   const { t, locale } = useI18n()
-  const credentials = credentialsRepo.list().filter((c) => c.visible && c.number && c.number.trim() !== '')
+  const { data: credentials } = useAsyncData(getPublicCredentials, [])
 
-  if (credentials.length === 0) return null
+  if (!credentials || credentials.length === 0) return null
 
   return (
     <section className="border-y border-border bg-surface py-10">

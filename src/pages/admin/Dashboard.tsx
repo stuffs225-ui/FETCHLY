@@ -6,7 +6,6 @@ import { DonutChart } from '@/components/ui/DonutChart'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { requestsRepo, quotationsRepo } from '@/lib/repo'
-import { useCollectionVersion } from '@/lib/useCollection'
 import { formatDate, formatMoney } from '@/lib/utils'
 import type { SourcingRequest } from '@/lib/types'
 
@@ -20,10 +19,9 @@ const columns: Column<SourcingRequest>[] = [
 ]
 
 export default function Dashboard() {
-  useCollectionVersion()
   const navigate = useNavigate()
-  const requests = requestsRepo.list()
-  const quotations = quotationsRepo.list()
+  const { data: requests } = requestsRepo.useList()
+  const { data: quotations } = quotationsRepo.useList()
 
   const count = (status: SourcingRequest['status']) => requests.filter((r) => r.status === status).length
 

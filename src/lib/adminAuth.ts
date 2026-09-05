@@ -1,30 +1,28 @@
-/**
- * Admin authentication.
- *
- * No backend/identity provider is wired up in this environment, so this is a
- * client-side password gate backed by a Vite env var, with the "signed-in"
- * flag kept in sessionStorage. This is a development-tier stand-in only —
- * before any real deployment, replace this module with real server-side
- * session/JWT auth (the login form and route guard already assume a simple
- * `login(password): boolean` / `logout()` / `isAuthed(): boolean` contract,
- * so the swap is isolated to this file).
- */
+import { api, ApiError } from './api'
 
-const STORAGE_KEY = 'gs_admin_authed'
-const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'admin@2026'
-
-export function isAuthed(): boolean {
-  return sessionStorage.getItem(STORAGE_KEY) === 'true'
+export interface AdminSessionUser {
+  id: string
+  name: string
+  email: string
+  role: 'admin' | 'sales'
 }
 
-export function login(password: string): boolean {
-  if (password === ADMIN_PASSWORD) {
-    sessionStorage.setItem(STORAGE_KEY, 'true')
-    return true
+/** Returns the signed-in admin user, or null if there is no active session (never throws for a plain 401). */
+export async function fetchCurrentUser(): Promise<AdminSessionUser | null> {
+  try {
+    const { user } = await api.get<{ user: AdminSessionUser }>('/auth/me')
+    return user
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) return null
+    throw err
   }
-  return false
 }
 
-export function logout() {
-  sessionStorage.removeItem(STORAGE_KEY)
+export async function login(email: string, password: string): Promise<AdminSessionUser> {
+  const { user } = await api.post<{ user: AdminSessionUser }>('/auth/login', { email, password })
+  return user
+}
+
+export async function logout(): Promise<void> {
+  await api.post('/auth/logout')
 }

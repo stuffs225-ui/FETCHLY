@@ -3,13 +3,20 @@ import { Mail, Phone } from 'lucide-react'
 import { Logo } from './Logo'
 import { TrustBar } from './TrustBar'
 import { useI18n } from '@/i18n'
-import { companySettingsStore } from '@/lib/repo'
-import { useCollectionVersion } from '@/lib/useCollection'
+import { getPublicCompany } from '@/lib/repo'
+import { useAsyncData } from '@/lib/useAsync'
+import type { CompanySettings } from '@/lib/types'
+
+const emptySettings: CompanySettings = {
+  companyNameAr: '', companyNameEn: '', crNumber: '', vatNumber: '', zakatCertificate: '', sbcNumber: '',
+  nationalAddress: '', baladyLicense: '', phone: '', whatsapp: '', businessEmail: '', quotationEmail: '',
+  websiteDomain: '', address: '', footerText: '', defaultVatRate: 15, defaultCurrency: 'SAR',
+}
 
 export default function PublicFooter() {
-  useCollectionVersion()
   const { t } = useI18n()
-  const settings = companySettingsStore.get()
+  const { data } = useAsyncData(getPublicCompany, [])
+  const settings = data ?? emptySettings
 
   const legalLines = [
     settings.crNumber && `CR: ${settings.crNumber}`,

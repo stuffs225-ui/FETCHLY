@@ -154,7 +154,7 @@ CREATE TABLE IF NOT EXISTS credentials (
   issuedDate TEXT,
   expiryDate TEXT,
   verifyUrl TEXT,
-  documentAttachmentId TEXT,
+  documentDataUrl TEXT,
   visible INTEGER NOT NULL DEFAULT 1
 );
 

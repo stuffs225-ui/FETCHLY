@@ -3,8 +3,8 @@ import { Globe2,
   LayoutDashboard, ClipboardList, FileSpreadsheet, Boxes, MapPinned, HelpCircle, ShieldCheck, FileCog, Building2, Mail, Users, LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { companySettingsStore } from '@/lib/repo'
-import { useCollectionVersion } from '@/lib/useCollection'
+import { getCompanySettings } from '@/lib/repo'
+import { useAsyncData } from '@/lib/useAsync'
 
 const links = [
   { to: '/admin/dashboard', label: 'الرئيسية', icon: LayoutDashboard },
@@ -21,9 +21,8 @@ const links = [
 ]
 
 export default function AdminSidebar({ onLogout }: { onLogout: () => void }) {
-  useCollectionVersion()
-  const settings = companySettingsStore.get()
-  const name = settings.companyNameAr.trim()
+  const { data: settings } = useAsyncData(getCompanySettings, [])
+  const name = settings?.companyNameAr.trim() ?? ''
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col bg-navy lg:flex">

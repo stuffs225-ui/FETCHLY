@@ -1,17 +1,16 @@
 import { ExternalLink, FileText, ShieldCheck } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import { Card } from '@/components/ui/Card'
-import { credentialsRepo } from '@/lib/repo'
-import { useCollectionVersion } from '@/lib/useCollection'
+import { getPublicCredentials } from '@/lib/repo'
+import { useAsyncData } from '@/lib/useAsync'
 import { formatDate } from '@/lib/utils'
 import { usePageTitle } from '@/lib/usePageTitle'
 
 export default function Trust() {
-  useCollectionVersion()
   const { t, locale } = useI18n()
   usePageTitle('الموثوقية والامتثال | الوضوح يبدأ من بياناتنا', 'Trust & Compliance | Clarity Starts With Our Data')
   const p = t.trustPage
-  const credentials = credentialsRepo.list().filter((c) => c.visible && c.number && c.number.trim() !== '')
+  const { data: credentials } = useAsyncData(getPublicCredentials, [])
 
   return (
     <>
@@ -24,7 +23,7 @@ export default function Trust() {
 
       <section className="py-20">
         <div className="mx-auto max-w-5xl px-6 lg:px-8">
-          {credentials.length === 0 ? (
+          {!credentials || credentials.length === 0 ? (
             <p className="text-center text-text-muted">{p.empty}</p>
           ) : (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -64,7 +63,7 @@ export default function Trust() {
                         {p.fields.verify} <ExternalLink className="h-3 w-3" />
                       </a>
                     )}
-                    {c.documentAttachmentId && (
+                    {c.documentDataUrl && (
                       <span className="inline-flex items-center gap-1 text-xs text-text-muted">
                         <FileText className="h-3 w-3" /> {p.fields.document}
                       </span>

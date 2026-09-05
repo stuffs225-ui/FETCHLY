@@ -1,32 +1,35 @@
 import { useState } from 'react'
-import { Mail, Phone, MapPin, Clock, MessageCircle, CheckCircle2 } from 'lucide-react'
+import { Mail, Phone, MapPin, Clock, MessageCircle, CheckCircle2, AlertCircle } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { DirArrow } from '@/components/ui/DirArrow'
 import { FieldLabel, Input, Textarea } from '@/components/ui/Input'
-import { companySettingsStore } from '@/lib/repo'
-import { useCollectionVersion } from '@/lib/useCollection'
-import { sendEmail } from '@/lib/emailService'
+import { getPublicCompany, submitContactMessage } from '@/lib/repo'
+import { useAsyncData } from '@/lib/useAsync'
 import { usePageTitle } from '@/lib/usePageTitle'
 
 export default function Contact() {
-  useCollectionVersion()
   const { t } = useI18n()
   usePageTitle('تواصل معنا', 'Contact Us')
-  const settings = companySettingsStore.get()
+  const { data: settings } = useAsyncData(getPublicCompany, [])
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' })
   const [sent, setSent] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState(false)
 
   const submit = async () => {
     if (!form.name || !form.email || !form.message) return
-    await sendEmail({
-      to: settings.businessEmail,
-      subject: `[Contact] ${form.subject || form.name}`,
-      body: `From: ${form.name} <${form.email}>\n\n${form.message}`,
-      kind: 'contact',
-    })
-    setSent(true)
+    setSubmitting(true)
+    setError(false)
+    try {
+      await submitContactMessage(form)
+      setSent(true)
+    } catch {
+      setError(true)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -43,34 +46,42 @@ export default function Contact() {
 
       <div className="mx-auto mt-16 grid max-w-5xl grid-cols-1 gap-8 px-6 lg:grid-cols-2 lg:px-8">
         <Card className="space-y-5 p-7">
-          <div className="flex items-center gap-3">
-            <Mail className="h-4.5 w-4.5 text-primary" />
-            <div>
-              <p className="text-xs text-text-muted">{t.contactPage.fields.email}</p>
-              <p className="font-medium text-text">{settings.businessEmail}</p>
+          {settings?.businessEmail && (
+            <div className="flex items-center gap-3">
+              <Mail className="h-4.5 w-4.5 text-primary" />
+              <div>
+                <p className="text-xs text-text-muted">{t.contactPage.fields.email}</p>
+                <p className="font-medium text-text" dir="ltr">{settings.businessEmail}</p>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Phone className="h-4.5 w-4.5 text-primary" />
-            <div>
-              <p className="text-xs text-text-muted">{t.contactPage.fields.phone}</p>
-              <p className="font-medium text-text">{settings.phone}</p>
+          )}
+          {settings?.phone && (
+            <div className="flex items-center gap-3">
+              <Phone className="h-4.5 w-4.5 text-primary" />
+              <div>
+                <p className="text-xs text-text-muted">{t.contactPage.fields.phone}</p>
+                <p className="font-medium text-text" dir="ltr">{settings.phone}</p>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <MessageCircle className="h-4.5 w-4.5 text-primary" />
-            <div>
-              <p className="text-xs text-text-muted">{t.contactPage.fields.whatsapp}</p>
-              <p className="font-medium text-text">{settings.whatsapp}</p>
+          )}
+          {settings?.whatsapp && (
+            <div className="flex items-center gap-3">
+              <MessageCircle className="h-4.5 w-4.5 text-primary" />
+              <div>
+                <p className="text-xs text-text-muted">{t.contactPage.fields.whatsapp}</p>
+                <p className="font-medium text-text" dir="ltr">{settings.whatsapp}</p>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <MapPin className="h-4.5 w-4.5 text-primary" />
-            <div>
-              <p className="text-xs text-text-muted">{t.contactPage.fields.address}</p>
-              <p className="font-medium text-text">{settings.address}</p>
+          )}
+          {settings?.address && (
+            <div className="flex items-center gap-3">
+              <MapPin className="h-4.5 w-4.5 text-primary" />
+              <div>
+                <p className="text-xs text-text-muted">{t.contactPage.fields.address}</p>
+                <p className="font-medium text-text">{settings.address}</p>
+              </div>
             </div>
-          </div>
+          )}
           <div className="flex items-center gap-3">
             <Clock className="h-4.5 w-4.5 text-primary" />
             <div>
@@ -104,8 +115,13 @@ export default function Contact() {
                 <FieldLabel>{t.contactPage.form.message}</FieldLabel>
                 <Textarea value={form.message} onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))} />
               </div>
-              <Button onClick={submit} className="w-full justify-center">
-                {t.contactPage.form.submit}
+              {error && (
+                <p className="flex items-center gap-1.5 text-xs text-danger">
+                  <AlertCircle className="h-3.5 w-3.5" /> {t.requestForm.errors.submitFailed}
+                </p>
+              )}
+              <Button onClick={submit} disabled={submitting} className="w-full justify-center">
+                {submitting ? t.requestForm.submitting : t.contactPage.form.submit}
               </Button>
             </div>
           )}

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { UploadCloud, X, FileText, Image as ImageIcon } from 'lucide-react'
-import { ACCEPTED_FILE_TYPES, MAX_FILE_SIZE, MAX_FILES } from '@/lib/attachments'
+import { ACCEPTED_FILE_TYPES, MAX_FILE_SIZE, MAX_FILES } from '@/lib/uploadConstants'
 import { useI18n } from '@/i18n'
 import { cn } from '@/lib/utils'
 

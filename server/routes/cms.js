@@ -18,7 +18,7 @@ export const credentialsRouter = createCrudRouter({
   table: 'credentials',
   label: 'شهادة اعتماد',
   boolColumns: ['visible'],
-  columns: ['key', 'labelAr', 'labelEn', 'authority', 'number', 'issuedDate', 'expiryDate', 'verifyUrl', 'documentAttachmentId', 'visible'],
+  columns: ['key', 'labelAr', 'labelEn', 'authority', 'number', 'issuedDate', 'expiryDate', 'verifyUrl', 'documentDataUrl', 'visible'],
 })
 
 export const savedProductsRouter = createCrudRouter({

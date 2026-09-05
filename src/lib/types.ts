@@ -51,6 +51,7 @@ export interface SourcingRequest {
   internalNotes?: string
   assignedAgent?: string
   attachmentIds: string[]
+  attachments?: AttachmentMeta[]
   consentAt: string
 }
 
@@ -157,7 +158,7 @@ export interface Credential {
   issuedDate?: string
   expiryDate?: string
   verifyUrl?: string
-  documentAttachmentId?: string
+  documentDataUrl?: string
   visible: boolean
 }
 
@@ -202,8 +203,9 @@ export interface EmailLogEntry {
   body: string
   kind: 'acknowledgement' | 'quotation' | 'contact'
   relatedId?: string
-  status: 'simulated' | 'sent' | 'failed'
+  status: 'sent' | 'failed'
   attachmentName?: string
+  errorMessage?: string
 }
 
 export interface AuditLogEntry {

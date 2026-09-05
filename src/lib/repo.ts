@@ -1,8 +1,9 @@
-import { createCollection, createSingleton } from './storage'
-import { uid } from './utils'
+import { api } from './api'
+import { createResource } from './apiResource'
 import type {
   SourcingRequest,
   Quotation,
+  QuotationStatus,
   SavedProduct,
   SavedTerm,
   SourcingCase,
@@ -16,190 +17,110 @@ import type {
 } from './types'
 
 // ---------------------------------------------------------------------------
-// Sequence counters (request / quotation numbering)
-// ---------------------------------------------------------------------------
-
-interface Counters {
-  requestSeq: number
-  quotationSeq: number
-}
-
-const countersStore = createSingleton<Counters>('counters', { requestSeq: 0, quotationSeq: 0 })
-
-export function nextRequestNumber(): string {
-  const c = countersStore.get()
-  const seq = c.requestSeq + 1
-  countersStore.set({ ...c, requestSeq: seq })
-  const year = new Date().getFullYear()
-  return `REQ-${year}-${String(seq).padStart(5, '0')}`
-}
-
-export function nextQuotationNumber(): string {
-  const c = countersStore.get()
-  const seq = c.quotationSeq + 1
-  countersStore.set({ ...c, quotationSeq: seq })
-  const year = new Date().getFullYear()
-  return `QT-${year}-${String(seq).padStart(4, '0')}`
-}
-
-// ---------------------------------------------------------------------------
 // Requests
 // ---------------------------------------------------------------------------
 
-export const requestsRepo = createCollection<SourcingRequest>('requests')
+export const requestsRepo = createResource<SourcingRequest>('/requests')
+
+export async function submitSourcingRequest(formData: FormData): Promise<{ id: string; requestNumber: string }> {
+  const result = await api.postForm<{ id: string; requestNumber: string }>('/requests', formData)
+  return result
+}
+
+export function attachmentUrl(requestId: string, attachmentId: string) {
+  return `/api/requests/${requestId}/attachments/${attachmentId}`
+}
 
 // ---------------------------------------------------------------------------
 // Quotations
 // ---------------------------------------------------------------------------
 
-export const quotationsRepo = createCollection<Quotation>('quotations')
+export const quotationsRepo = createResource<Quotation>('/quotations')
 
-export function quotationsForRequest(requestId: string): Quotation[] {
-  return quotationsRepo
-    .list()
-    .filter((q) => q.requestId === requestId)
-    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+export async function quotationsForRequest(requestId: string): Promise<Quotation[]> {
+  return api.get<Quotation[]>(`/quotations?requestId=${encodeURIComponent(requestId)}`)
 }
 
-export function revisionsForBase(baseNumber: string): Quotation[] {
-  return quotationsRepo
-    .list()
-    .filter((q) => q.baseNumber === baseNumber)
-    .sort((a, b) => a.revision - b.revision)
+export async function sendQuotation(id: string, overrides?: { subject: string; body: string }): Promise<Quotation> {
+  return api.post<Quotation>(`/quotations/${id}/send`, overrides)
+}
+
+export async function getQuotationEmailPreview(id: string): Promise<{ subject: string; body: string }> {
+  return api.get(`/quotations/${id}/email-preview`)
+}
+
+export async function reviseQuotation(id: string): Promise<Quotation> {
+  return api.post<Quotation>(`/quotations/${id}/revise`)
+}
+
+export async function updateQuotationStatus(id: string, status: QuotationStatus): Promise<Quotation> {
+  return api.patch<Quotation>(`/quotations/${id}/status`, { status })
+}
+
+export function quotationPdfUrl(id: string) {
+  return `/api/quotations/${id}/pdf`
 }
 
 // ---------------------------------------------------------------------------
 // Saved products & terms (quotation builder reuse)
 // ---------------------------------------------------------------------------
 
-export const savedProductsRepo = createCollection<SavedProduct>('saved_products')
-export const savedTermsRepo = createCollection<SavedTerm>('saved_terms', () => [
-  {
-    id: uid('term'),
-    kind: 'payment',
-    label: '100% مقدم قبل الشحن',
-    value: '100% Advance Payment before shipment.',
-  },
-  {
-    id: uid('term'),
-    kind: 'payment',
-    label: '50% مقدم / 50% قبل التسليم',
-    value: '50% Advance / 50% Before Delivery.',
-  },
-  {
-    id: uid('term'),
-    kind: 'tc',
-    label: 'شروط عامة',
-    value:
-      'هذا العرض غير قابل للتفاوض بعد انتهاء صلاحيته. يخضع التوريد لتوفر المنتج لدى المصدر وقت تأكيد الطلب. أي رسوم جمركية أو تصريحات إضافية مطلوبة من جهات نظامية تكون على مسؤولية العميل ما لم يُذكر خلاف ذلك صراحة.',
-  },
-])
+export const savedProductsRepo = createResource<SavedProduct>('/cms/saved-products')
+export const savedTermsRepo = createResource<SavedTerm>('/cms/saved-terms')
 
 // ---------------------------------------------------------------------------
-// Sourcing cases (public homepage CMS)
+// CMS: sourcing cases, FAQs, trust credentials
 // ---------------------------------------------------------------------------
 
-/**
- * No illustrative/fictional cases are seeded. The public homepage section
- * that reads from this repo stays hidden until an admin adds a real,
- * completed sourcing case.
- */
-export const casesRepo = createCollection<SourcingCase>('cases', () => [])
+export const casesRepo = createResource<SourcingCase>('/cms/cases')
+export const faqsRepo = createResource<FaqItem>('/cms/faqs')
+export const credentialsRepo = createResource<Credential>('/cms/credentials')
 
 // ---------------------------------------------------------------------------
-// FAQ overrides (falls back to i18n defaults on the public site when empty)
+// Public read endpoints (no admin session required) — used by the public
+// site so a visitor's browser never needs write access to see published
+// content, only Admin can create/edit it.
 // ---------------------------------------------------------------------------
 
-export const faqsRepo = createCollection<FaqItem>('faqs')
+export async function getPublicCompany(): Promise<CompanySettings> {
+  return api.get<CompanySettings>('/public/company')
+}
 
-// ---------------------------------------------------------------------------
-// Trust & compliance credentials
-// ---------------------------------------------------------------------------
+export async function getPublicContent(): Promise<ContentOverrides> {
+  return api.get<ContentOverrides>('/public/content')
+}
 
-export const credentialsRepo = createCollection<Credential>('credentials', () => [
-  { id: uid('cred'), key: 'cr', labelAr: 'السجل التجاري', labelEn: 'Commercial Registration', visible: true },
-  { id: uid('cred'), key: 'sbc', labelAr: 'توثيق منصة الأعمال السعودية', labelEn: 'Saudi Business Center', visible: true },
-  { id: uid('cred'), key: 'vat', labelAr: 'التسجيل في ضريبة القيمة المضافة', labelEn: 'VAT Registration', visible: true },
-  { id: uid('cred'), key: 'zakat', labelAr: 'شهادة الزكاة', labelEn: 'Zakat Certificate', visible: true },
-  { id: uid('cred'), key: 'address', labelAr: 'العنوان الوطني', labelEn: 'National Address', visible: true },
-  { id: uid('cred'), key: 'balady', labelAr: 'رخصة بلدي', labelEn: 'Balady License', visible: true },
-])
+export async function getPublicCases(): Promise<SourcingCase[]> {
+  return api.get<SourcingCase[]>('/public/cases')
+}
 
-// ---------------------------------------------------------------------------
-// Company settings
-// ---------------------------------------------------------------------------
+export async function getPublicFaqs(): Promise<FaqItem[]> {
+  return api.get<FaqItem[]>('/public/faqs')
+}
 
-/**
- * Every field here defaults to an empty string rather than a bracket
- * placeholder. Public-facing components (footer, trust bar, trust page)
- * only render a field when it is actually filled in from Admin → Company
- * Settings — never a fabricated or placeholder-looking value.
- */
-export const companySettingsStore = createSingleton<CompanySettings>('company_settings', {
-  companyNameAr: '',
-  companyNameEn: '',
-  logoDataUrl: undefined,
-  logoArDataUrl: undefined,
-  crNumber: '',
-  vatNumber: '',
-  zakatCertificate: '',
-  sbcNumber: '',
-  nationalAddress: '',
-  baladyLicense: '',
-  phone: '',
-  whatsapp: '',
-  businessEmail: '',
-  quotationEmail: '',
-  websiteDomain: '',
-  address: '',
-  footerText: '',
-  defaultVatRate: 15,
-  defaultCurrency: 'SAR',
-})
-
-// ---------------------------------------------------------------------------
-// Email settings + log
-// ---------------------------------------------------------------------------
-
-export const emailSettingsStore = createSingleton<EmailSettings>('email_settings', {
-  senderName: '',
-  senderEmail: '',
-  internalNotificationEmails: '',
-  replyToEmail: '',
-  ackTemplateAr: {
-    subject: 'تم استلام طلبك — {{requestNumber}}',
-    body: 'مرحبًا {{name}}،\n\nتم استلام طلبك بنجاح.\n\nرقم الطلب: {{requestNumber}}\n\nسنقوم بمراجعة التفاصيل وإرسال عرض السعر إلى بريدك الإلكتروني بعد استكمال عملية التسعير.\n\nشكرًا لك.',
-  },
-  ackTemplateEn: {
-    subject: 'We received your request — {{requestNumber}}',
-    body: 'Hello {{name}},\n\nYour request has been received successfully.\n\nRequest number: {{requestNumber}}\n\nWe will review the details and send your quotation by email once pricing is complete.\n\nThank you.',
-  },
-  quoteTemplateAr: {
-    subject: 'عرض السعر الخاص بك — {{quotationNumber}}',
-    body: 'مرحبًا {{name}}،\n\nمرفق عرض السعر الخاص بطلبك رقم {{requestNumber}}.\n\nرقم العرض: {{quotationNumber}}\nصالح حتى: {{validUntil}}\n\nيسعدنا الرد على أي استفسار.',
-  },
-  quoteTemplateEn: {
-    subject: 'Your Quotation — {{quotationNumber}}',
-    body: 'Hello {{name}},\n\nPlease find attached the quotation for your request {{requestNumber}}.\n\nQuotation number: {{quotationNumber}}\nValid until: {{validUntil}}\n\nWe are happy to answer any questions.',
-  },
-})
-
-export const emailLogRepo = createCollection<EmailLogEntry>('email_log')
-
-// ---------------------------------------------------------------------------
-// Audit log
-// ---------------------------------------------------------------------------
-
-export const auditLogRepo = createCollection<AuditLogEntry>('audit_log')
-
-export function logAudit(entry: Omit<AuditLogEntry, 'id' | 'createdAt'>) {
-  auditLogRepo.upsert({ ...entry, id: uid('audit'), createdAt: new Date().toISOString() })
+export async function getPublicCredentials(): Promise<Credential[]> {
+  return api.get<Credential[]>('/public/credentials')
 }
 
 // ---------------------------------------------------------------------------
-// Homepage content overrides (Hero headline/sub/CTAs) — CMS-editable, falls
-// back to the i18n defaults when a field is left empty.
+// Company / email / content settings (admin)
 // ---------------------------------------------------------------------------
+
+export async function getCompanySettings(): Promise<CompanySettings> {
+  return api.get<CompanySettings>('/settings/company')
+}
+
+export async function updateCompanySettings(data: CompanySettings): Promise<CompanySettings> {
+  return api.put<CompanySettings>('/settings/company', data)
+}
+
+export async function getEmailSettings(): Promise<EmailSettings> {
+  return api.get<EmailSettings>('/settings/email')
+}
+
+export async function updateEmailSettings(data: EmailSettings): Promise<EmailSettings> {
+  return api.put<EmailSettings>('/settings/email', data)
+}
 
 export interface ContentOverrides {
   heroHeadlineAr: string
@@ -208,17 +129,37 @@ export interface ContentOverrides {
   heroSubEn: string
 }
 
-export const contentOverridesStore = createSingleton<ContentOverrides>('content_overrides', {
-  heroHeadlineAr: '',
-  heroSubAr: '',
-  heroHeadlineEn: '',
-  heroSubEn: '',
-})
+export async function getContentOverrides(): Promise<ContentOverrides> {
+  return api.get<ContentOverrides>('/settings/content')
+}
+
+export async function updateContentOverrides(data: ContentOverrides): Promise<ContentOverrides> {
+  return api.put<ContentOverrides>('/settings/content', data)
+}
 
 // ---------------------------------------------------------------------------
-// Admin users (architecture prepared for roles; V1 ships a single admin)
+// Admin users
 // ---------------------------------------------------------------------------
 
-export const adminUsersRepo = createCollection<AdminUser>('admin_users', () => [
-  { id: uid('user'), name: 'المشرف الرئيسي', email: '', role: 'admin' },
-])
+export interface AdminUserRecord extends AdminUser {
+  active: boolean
+  createdAt: string
+}
+
+export const adminUsersRepo = createResource<AdminUserRecord>('/users')
+
+// ---------------------------------------------------------------------------
+// Logs (read-only)
+// ---------------------------------------------------------------------------
+
+export async function submitContactMessage(data: { name: string; email: string; subject?: string; message: string }): Promise<void> {
+  await api.post('/contact', data)
+}
+
+export async function getEmailLog(): Promise<EmailLogEntry[]> {
+  return api.get<EmailLogEntry[]>('/logs/email')
+}
+
+export async function getAuditLog(): Promise<AuditLogEntry[]> {
+  return api.get<AuditLogEntry[]>('/logs/audit')
+}

@@ -1,22 +1,44 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Lock, AlertCircle, Globe2 } from 'lucide-react'
+import { Lock, Mail, AlertCircle, Globe2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { FieldLabel, Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-import { companySettingsStore } from '@/lib/repo'
+import { getPublicCompany } from '@/lib/repo'
+import { useAsyncData } from '@/lib/useAsync'
+import { login, type AdminSessionUser } from '@/lib/adminAuth'
+import { ApiError } from '@/lib/api'
 
-export default function AdminLogin({ onLogin }: { onLogin: (password: string) => boolean }) {
+const errorMessages: Record<string, string> = {
+  invalid: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+  locked: 'تم قفل الحساب مؤقتًا بسبب محاولات دخول متكررة فاشلة. حاول مرة أخرى بعد 15 دقيقة.',
+  too_many_attempts: 'محاولات كثيرة جدًا. حاول مرة أخرى بعد قليل.',
+  missing_credentials: 'الرجاء إدخال البريد الإلكتروني وكلمة المرور.',
+}
+
+export default function AdminLogin({ onLogin }: { onLogin: (user: AdminSessionUser) => void }) {
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState(false)
-  const settings = companySettingsStore.get()
+  const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const { data: settings } = useAsyncData(getPublicCompany, [])
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
-    setError(!onLogin(password))
+    setSubmitting(true)
+    setError(null)
+    try {
+      const user = await login(email, password)
+      onLogin(user)
+    } catch (err) {
+      const reason = err instanceof ApiError ? err.message : 'invalid'
+      setError(errorMessages[reason] ?? errorMessages.invalid)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  const name = settings.companyNameAr.trim()
+  const name = settings?.companyNameAr.trim() ?? ''
 
   return (
     <div dir="rtl" lang="ar" className="flex min-h-screen items-center justify-center bg-surface px-6">
@@ -30,6 +52,22 @@ export default function AdminLogin({ onLogin }: { onLogin: (password: string) =>
 
         <form onSubmit={submit} className="mt-8 space-y-5">
           <div>
+            <FieldLabel htmlFor="admin-email">البريد الإلكتروني</FieldLabel>
+            <div className="relative">
+              <Mail className="pointer-events-none absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+              <Input
+                id="admin-email"
+                type="email"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setError(null) }}
+                placeholder="admin@example.com"
+                className="ps-10"
+                dir="ltr"
+                autoFocus
+              />
+            </div>
+          </div>
+          <div>
             <FieldLabel htmlFor="admin-password">كلمة المرور</FieldLabel>
             <div className="relative">
               <Lock className="pointer-events-none absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
@@ -37,23 +75,19 @@ export default function AdminLogin({ onLogin }: { onLogin: (password: string) =>
                 id="admin-password"
                 type="password"
                 value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value)
-                  setError(false)
-                }}
+                onChange={(e) => { setPassword(e.target.value); setError(null) }}
                 placeholder="أدخل كلمة المرور"
                 className="ps-10"
-                autoFocus
               />
             </div>
             {error && (
               <p className="mt-2 flex items-center gap-1.5 text-xs text-danger">
-                <AlertCircle className="h-3.5 w-3.5" /> كلمة المرور غير صحيحة.
+                <AlertCircle className="h-3.5 w-3.5" /> {error}
               </p>
             )}
           </div>
-          <Button type="submit" className="w-full justify-center">
-            تسجيل الدخول
+          <Button type="submit" className="w-full justify-center" disabled={submitting}>
+            {submitting ? 'جارٍ الدخول...' : 'تسجيل الدخول'}
           </Button>
         </form>
       </Card>

@@ -1,16 +1,15 @@
 import { Link } from 'react-router-dom'
 import { Globe2 } from 'lucide-react'
 import { useI18n } from '@/i18n'
-import { companySettingsStore } from '@/lib/repo'
-import { useCollectionVersion } from '@/lib/useCollection'
+import { getPublicCompany } from '@/lib/repo'
+import { useAsyncData } from '@/lib/useAsync'
 import { cn } from '@/lib/utils'
 
 export function Logo({ className, dark }: { className?: string; dark?: boolean }) {
-  useCollectionVersion()
   const { locale } = useI18n()
-  const settings = companySettingsStore.get()
-  const name = (locale === 'ar' ? settings.companyNameAr : settings.companyNameEn).trim()
-  const logo = locale === 'ar' ? settings.logoArDataUrl || settings.logoDataUrl : settings.logoDataUrl
+  const { data: settings } = useAsyncData(getPublicCompany, [])
+  const name = (locale === 'ar' ? settings?.companyNameAr : settings?.companyNameEn)?.trim() ?? ''
+  const logo = locale === 'ar' ? settings?.logoArDataUrl || settings?.logoDataUrl : settings?.logoDataUrl
 
   return (
     <Link to="/" className={cn('flex items-center gap-2.5', className)}>

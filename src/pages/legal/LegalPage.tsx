@@ -1,8 +1,8 @@
 import { useParams } from 'react-router-dom'
 import { useI18n } from '@/i18n'
 import { legalDocs } from './legalContent'
-import { companySettingsStore } from '@/lib/repo'
-import { useCollectionVersion } from '@/lib/useCollection'
+import { getPublicCompany } from '@/lib/repo'
+import { useAsyncData } from '@/lib/useAsync'
 import { formatDate } from '@/lib/utils'
 import NotFound from '@/pages/public/NotFound'
 import { usePageTitle } from '@/lib/usePageTitle'
@@ -12,17 +12,16 @@ function fill(text: string, vars: Record<string, string>) {
 }
 
 export default function LegalPage() {
-  useCollectionVersion()
   const { locale } = useI18n()
   const { slug } = useParams<{ slug: keyof typeof legalDocs }>()
   const doc = slug ? legalDocs[slug] : undefined
-  const settings = companySettingsStore.get()
+  const { data: settings } = useAsyncData(getPublicCompany, [])
   usePageTitle(doc?.titleAr ?? 'الصفحة غير موجودة', doc?.titleEn ?? 'Page Not Found')
 
   if (!doc) return <NotFound />
 
   const sections = locale === 'ar' ? doc.sectionsAr : doc.sectionsEn
-  const vars = { company: locale === 'ar' ? settings.companyNameAr : settings.companyNameEn, email: settings.businessEmail }
+  const vars = { company: (locale === 'ar' ? settings?.companyNameAr : settings?.companyNameEn) ?? '', email: settings?.businessEmail ?? '' }
 
   return (
     <section className="py-20">

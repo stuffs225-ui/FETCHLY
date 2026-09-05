@@ -1,15 +1,13 @@
 import { useState } from 'react'
-import { ChevronDown, CheckCircle2, Copy, Check } from 'lucide-react'
+import { ChevronDown, CheckCircle2, Copy, Check, AlertCircle } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { FieldLabel, Input, Textarea } from '@/components/ui/Input'
 import { FileDropzone, type PendingFile } from '@/components/ui/FileDropzone'
-import { requestsRepo, nextRequestNumber, logAudit, companySettingsStore, emailSettingsStore } from '@/lib/repo'
-import { renderTemplate, sendEmail } from '@/lib/emailService'
-import { putAttachment } from '@/lib/attachments'
-import { uid } from '@/lib/utils'
-import type { SourcingRequest, SourcePreference } from '@/lib/types'
+import { submitSourcingRequest } from '@/lib/repo'
+import { ApiError } from '@/lib/api'
+import type { SourcePreference } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 interface FormState {
@@ -52,6 +50,7 @@ export function RequestForm() {
   const [showMore, setShowMore] = useState(false)
   const [errors, setErrors] = useState<Partial<Record<keyof FormState | 'consent' | 'files', string>>>({})
   const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [result, setResult] = useState<{ requestNumber: string } | null>(null)
   const [copied, setCopied] = useState(false)
 
@@ -75,68 +74,38 @@ export function RequestForm() {
       return
     }
     setSubmitting(true)
+    setSubmitError(null)
 
-    const requestId = uid('req')
-    const attachmentIds: string[] = []
-    for (const pf of files) {
-      const attId = uid('att')
-      await putAttachment({
-        id: attId,
-        requestId,
-        fileName: pf.file.name,
-        mimeType: pf.file.type,
-        size: pf.file.size,
-        blob: pf.file,
-        createdAt: new Date().toISOString(),
-      })
-      attachmentIds.push(attId)
+    const body = new FormData()
+    body.set('name', form.name.trim())
+    if (form.company.trim()) body.set('company', form.company.trim())
+    body.set('email', form.email.trim())
+    body.set('phone', form.phone.trim())
+    body.set('productName', form.productName.trim())
+    body.set('quantity', String(Number(form.quantity) || 1))
+    if (form.productUrl.trim()) body.set('productUrl', form.productUrl.trim())
+    if (form.description.trim()) body.set('description', form.description.trim())
+    if (form.brand.trim()) body.set('brand', form.brand.trim())
+    if (form.model.trim()) body.set('model', form.model.trim())
+    if (form.partNumber.trim()) body.set('partNumber', form.partNumber.trim())
+    body.set('sourcePreference', form.sourcePreference)
+    if (form.deliveryCity.trim()) body.set('deliveryCity', form.deliveryCity.trim())
+    body.set('locale', locale)
+    for (const pf of files) body.append('files', pf.file)
+
+    try {
+      const { requestNumber } = await submitSourcingRequest(body)
+      setResult({ requestNumber })
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 400 && err.fields) {
+        setErrors((prev) => ({ ...prev, ...err.fields }))
+        document.getElementById('request-form-top')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      } else {
+        setSubmitError(t.requestForm.errors.submitFailed)
+      }
+    } finally {
+      setSubmitting(false)
     }
-
-    const requestNumber = nextRequestNumber()
-    const record: SourcingRequest = {
-      id: requestId,
-      requestNumber,
-      createdAt: new Date().toISOString(),
-      locale,
-      status: 'new',
-      name: form.name.trim(),
-      company: form.company.trim() || undefined,
-      email: form.email.trim(),
-      phone: form.phone.trim(),
-      city: '',
-      productName: form.productName.trim(),
-      quantity: Number(form.quantity) || 1,
-      brand: form.brand.trim() || undefined,
-      model: form.model.trim() || undefined,
-      partNumber: form.partNumber.trim() || undefined,
-      productUrl: form.productUrl.trim() || undefined,
-      description: form.description.trim() || undefined,
-      sourcePreference: form.sourcePreference,
-      deliveryCity: form.deliveryCity.trim() || undefined,
-      attachmentIds,
-      consentAt: new Date().toISOString(),
-    }
-    requestsRepo.upsert(record)
-    logAudit({ entityType: 'request', entityId: record.id, action: 'تم إنشاء الطلب', actor: 'العميل' })
-
-    const emailSettings = emailSettingsStore.get()
-    const company = companySettingsStore.get()
-    const template = locale === 'ar' ? emailSettings.ackTemplateAr : emailSettings.ackTemplateEn
-    const rendered = renderTemplate(template.subject, template.body, { name: record.name, requestNumber })
-    await sendEmail({ to: record.email, subject: rendered.subject, body: rendered.body, kind: 'acknowledgement', relatedId: record.id })
-    if (emailSettings.internalNotificationEmails) {
-      await sendEmail({
-        to: emailSettings.internalNotificationEmails,
-        subject: `طلب جديد — ${requestNumber}`,
-        body: `طلب جديد من ${record.name} (${record.email}).\nالمنتج: ${record.productName}\nالكمية: ${record.quantity}`,
-        kind: 'acknowledgement',
-        relatedId: record.id,
-      })
-    }
-    void company
-
-    setSubmitting(false)
-    setResult({ requestNumber })
   }
 
   if (result) {
@@ -293,6 +262,11 @@ export function RequestForm() {
             </span>
           </label>
           {errors.consent && <p className="mt-1 text-xs text-danger">{errors.consent}</p>}
+          {submitError && (
+            <p className="mt-3 flex items-center gap-1.5 text-xs text-danger">
+              <AlertCircle className="h-3.5 w-3.5" /> {submitError}
+            </p>
+          )}
 
           <Button onClick={handleSubmit} disabled={submitting} className="mt-6 w-full justify-center" size="lg">
             {submitting ? t.requestForm.submitting : t.requestForm.submit}

@@ -4,14 +4,18 @@ import { Card } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Input, FieldLabel } from '@/components/ui/Input'
 import { savedProductsRepo } from '@/lib/repo'
-import { useCollectionVersion } from '@/lib/useCollection'
 import { formatDate, formatMoney } from '@/lib/utils'
 import type { SavedProduct } from '@/lib/types'
 
 export default function SavedProducts() {
-  useCollectionVersion()
+  const { data: items, refetch } = savedProductsRepo.useList()
   const [search, setSearch] = useState('')
-  const data = savedProductsRepo.list().filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
+  const data = items.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
+
+  const remove = async (id: string) => {
+    await savedProductsRepo.remove(id)
+    refetch()
+  }
 
   const columns: Column<SavedProduct>[] = [
     { key: 'name', header: 'اسم المنتج', sortValue: (p) => p.name },
@@ -22,7 +26,7 @@ export default function SavedProducts() {
       key: 'actions',
       header: '',
       render: (p) => (
-        <button onClick={() => savedProductsRepo.remove(p.id)} className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted hover:bg-danger/10 hover:text-danger">
+        <button onClick={() => remove(p.id)} className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted hover:bg-danger/10 hover:text-danger">
           <Trash2 className="h-4 w-4" />
         </button>
       ),

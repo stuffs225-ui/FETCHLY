@@ -1,14 +1,13 @@
 import { useI18n } from '@/i18n'
-import { casesRepo } from '@/lib/repo'
-import { useCollectionVersion } from '@/lib/useCollection'
+import { getPublicCases } from '@/lib/repo'
+import { useAsyncData } from '@/lib/useAsync'
 import { Card } from '@/components/ui/Card'
 
 export default function CasesSection() {
-  useCollectionVersion()
   const { t, locale } = useI18n()
-  const cases = casesRepo.list().filter((c) => c.published)
+  const { data: cases } = useAsyncData(getPublicCases, [])
 
-  if (cases.length === 0) return null
+  if (!cases || cases.length === 0) return null
 
   return (
     <section className="border-t border-border bg-surface/60 py-24">

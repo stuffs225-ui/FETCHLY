@@ -2,15 +2,14 @@ import { Button } from '@/components/ui/Button'
 import { DirArrow } from '@/components/ui/DirArrow'
 import GlobeStage from '@/components/three/GlobeStage'
 import { useI18n } from '@/i18n'
-import { contentOverridesStore } from '@/lib/repo'
-import { useCollectionVersion } from '@/lib/useCollection'
+import { getPublicContent } from '@/lib/repo'
+import { useAsyncData } from '@/lib/useAsync'
 
 export default function Hero() {
-  useCollectionVersion()
   const { t, locale } = useI18n()
-  const overrides = contentOverridesStore.get()
-  const headline = (locale === 'ar' ? overrides.heroHeadlineAr : overrides.heroHeadlineEn) || t.hero.headline
-  const sub = (locale === 'ar' ? overrides.heroSubAr : overrides.heroSubEn) || t.hero.sub
+  const { data: overrides } = useAsyncData(getPublicContent, [])
+  const headline = (locale === 'ar' ? overrides?.heroHeadlineAr : overrides?.heroHeadlineEn) || t.hero.headline
+  const sub = (locale === 'ar' ? overrides?.heroSubAr : overrides?.heroSubEn) || t.hero.sub
 
   return (
     <section className="relative overflow-hidden py-16 sm:py-20">
