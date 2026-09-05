@@ -1,0 +1,34 @@
+import { useState } from 'react'
+import { ChevronDown } from 'lucide-react'
+import { cn } from '@/lib/utils'
+
+export function Accordion({ items }: { items: { q: string; a: string }[] }) {
+  const [open, setOpen] = useState<number | null>(0)
+  return (
+    <div className="divide-y divide-border rounded-xl border border-border bg-card">
+      {items.map((item, i) => (
+        <div key={i}>
+          <button
+            onClick={() => setOpen(open === i ? null : i)}
+            className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left"
+          >
+            <span className="font-medium text-text">{item.q}</span>
+            <ChevronDown
+              className={cn('h-5 w-5 shrink-0 text-text-secondary transition-transform duration-300', open === i && 'rotate-180 text-primary')}
+            />
+          </button>
+          <div
+            className={cn(
+              'grid overflow-hidden transition-all duration-300 ease-in-out',
+              open === i ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
+            )}
+          >
+            <div className="overflow-hidden">
+              <p className="px-6 pb-5 text-sm leading-relaxed text-text-secondary">{item.a}</p>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
