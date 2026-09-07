@@ -229,7 +229,7 @@ export default function QuotationEditor() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+        <div className="order-2 space-y-6 lg:order-none lg:col-span-2">
           <Card className="p-6">
             <h3 className="text-sm font-bold text-primary">بيانات العرض</h3>
             <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -415,7 +415,7 @@ export default function QuotationEditor() {
           )}
         </div>
 
-        <div>
+        <div className="order-1 lg:order-none">
           <Card className="sticky top-6 space-y-4 border-primary/30 bg-primary/5 p-6">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-semibold text-text-muted">ملخص العرض</h4>
