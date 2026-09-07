@@ -216,37 +216,16 @@ export default function QuotationEditor() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/admin/quotations')} className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-light hover:bg-black/5">
-            <ArrowRight className="h-4 w-4 rtl:hidden" />
-            <ArrowLeft className="h-4 w-4 ltr:hidden" />
-          </button>
-          <div>
-            <h2 className="font-mono text-lg font-bold text-text">{quotation.quotationNumber}</h2>
-            {request && <p className="text-xs text-text-muted">مرتبط بالطلب {request.requestNumber}</p>}
-          </div>
-          <StatusBadge status={quotation.status} />
+      <div className="flex flex-wrap items-center gap-3">
+        <button onClick={() => navigate('/admin/quotations')} className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-light hover:bg-black/5">
+          <ArrowRight className="h-4 w-4 rtl:hidden" />
+          <ArrowLeft className="h-4 w-4 ltr:hidden" />
+        </button>
+        <div>
+          <h2 className="font-mono text-lg font-bold text-text">{quotation.quotationNumber}</h2>
+          {request && <p className="text-xs text-text-muted">مرتبط بالطلب {request.requestNumber}</p>}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" size="sm" onClick={handleSaveDraft}>
-            {saved ? <CheckCircle2 className="h-3.5 w-3.5" /> : null} حفظ
-          </Button>
-          <Button variant="secondary" size="sm" onClick={handlePreview}>
-            <Eye className="h-3.5 w-3.5" /> معاينة PDF
-          </Button>
-          <Button variant="secondary" size="sm" onClick={handleDownload}>
-            <Download className="h-3.5 w-3.5" /> تحميل PDF
-          </Button>
-          {quotation.status !== 'draft' && (
-            <Button variant="secondary" size="sm" onClick={handleCreateRevision}>
-              <Copy className="h-3.5 w-3.5" /> إنشاء نسخة معدّلة
-            </Button>
-          )}
-          <Button size="sm" onClick={openSendPanel}>
-            <Send className="h-3.5 w-3.5" /> إرسال للعميل
-          </Button>
-        </div>
+        <StatusBadge status={quotation.status} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -437,8 +416,11 @@ export default function QuotationEditor() {
         </div>
 
         <div>
-          <Card className="sticky top-6 space-y-3 border-primary/30 bg-primary/5 p-6">
-            <h4 className="text-xs font-semibold text-text-muted">ملخص العرض</h4>
+          <Card className="sticky top-6 space-y-4 border-primary/30 bg-primary/5 p-6">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-semibold text-text-muted">ملخص العرض</h4>
+              <StatusBadge status={quotation.status} />
+            </div>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between"><span className="text-text-muted">الإجمالي الفرعي</span><span className="font-mono text-text">{formatMoney(subtotal, quotation.currency, 'ar')}</span></div>
               {quotation.vatEnabled && (
@@ -448,6 +430,28 @@ export default function QuotationEditor() {
             <div className="flex justify-between border-t border-border pt-3 text-base font-bold">
               <span className="text-text">الإجمالي الكلي</span>
               <span className="font-mono text-text">{formatMoney(grandTotal, quotation.currency, 'ar')}</span>
+            </div>
+
+            <div className="space-y-2 border-t border-border pt-4">
+              <Button onClick={openSendPanel} className="w-full justify-center">
+                <Send className="h-3.5 w-3.5" /> إرسال للعميل
+              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="secondary" size="sm" onClick={handleSaveDraft} className="justify-center">
+                  {saved ? <CheckCircle2 className="h-3.5 w-3.5" /> : null} حفظ
+                </Button>
+                <Button variant="secondary" size="sm" onClick={handlePreview} className="justify-center">
+                  <Eye className="h-3.5 w-3.5" /> معاينة
+                </Button>
+                <Button variant="secondary" size="sm" onClick={handleDownload} className="justify-center">
+                  <Download className="h-3.5 w-3.5" /> تحميل PDF
+                </Button>
+                {quotation.status !== 'draft' && (
+                  <Button variant="secondary" size="sm" onClick={handleCreateRevision} className="justify-center">
+                    <Copy className="h-3.5 w-3.5" /> نسخة معدّلة
+                  </Button>
+                )}
+              </div>
             </div>
           </Card>
 

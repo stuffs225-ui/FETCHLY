@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Inbox, Search, Tags, MailCheck, ThumbsUp, ThumbsDown, Archive, AlertTriangle } from 'lucide-react'
+import { Inbox, Search, Tags, MailCheck, AlertTriangle } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { KpiCard } from '@/components/admin/KpiCard'
 import { DonutChart } from '@/components/ui/DonutChart'
@@ -53,16 +53,25 @@ export default function Dashboard() {
 
   const recent = [...requests].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)).slice(0, 8)
 
+  const secondaryStats = [
+    { label: 'تمت الموافقة', value: count('approved').toString() },
+    { label: 'مرفوضة', value: count('rejected').toString() },
+    { label: 'مغلقة', value: count('closed').toString() },
+    { label: 'طلبات هذا الشهر', value: thisMonth.length.toString() },
+    { label: 'عروض هذا الشهر', value: quotationsThisMonth.length.toString() },
+    { label: 'معدل الفوز', value: `${winRate}%` },
+    { label: 'إجمالي قيمة العروض', value: formatMoney(totalQuotationValue, 'SAR', 'ar') },
+    { label: 'قيمة العروض المقبولة', value: formatMoney(acceptedQuotationValue, 'SAR', 'ar') },
+    { label: 'متوسط قيمة العرض', value: formatMoney(avgQuoteValue, 'SAR', 'ar') },
+  ]
+
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-7">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KpiCard label="طلبات جديدة" value={count('new').toString()} icon={Inbox} />
         <KpiCard label="قيد المراجعة" value={count('in_review').toString()} icon={Search} />
         <KpiCard label="قيد التسعير" value={count('pricing').toString()} icon={Tags} />
         <KpiCard label="تم إرسال العرض" value={count('quote_sent').toString()} icon={MailCheck} accent="navy" />
-        <KpiCard label="تمت الموافقة" value={count('approved').toString()} icon={ThumbsUp} accent="emerald" />
-        <KpiCard label="مرفوضة" value={count('rejected').toString()} icon={ThumbsDown} />
-        <KpiCard label="مغلقة" value={count('closed').toString()} icon={Archive} />
       </div>
 
       {expiringQuotes.length > 0 && (
@@ -93,32 +102,17 @@ export default function Dashboard() {
           </div>
         </Card>
 
-        <div className="grid grid-cols-2 gap-4">
-          <Card className="p-5">
-            <p className="text-xs text-text-muted">طلبات هذا الشهر</p>
-            <p className="mt-2 font-mono text-2xl font-bold text-text">{thisMonth.length}</p>
-          </Card>
-          <Card className="p-5">
-            <p className="text-xs text-text-muted">عروض هذا الشهر</p>
-            <p className="mt-2 font-mono text-2xl font-bold text-text">{quotationsThisMonth.length}</p>
-          </Card>
-          <Card className="p-5">
-            <p className="text-xs text-text-muted">إجمالي قيمة العروض</p>
-            <p className="mt-2 font-mono text-xl font-bold text-text">{formatMoney(totalQuotationValue, 'SAR', 'ar')}</p>
-          </Card>
-          <Card className="p-5">
-            <p className="text-xs text-text-muted">قيمة العروض المقبولة</p>
-            <p className="mt-2 font-mono text-xl font-bold text-emerald">{formatMoney(acceptedQuotationValue, 'SAR', 'ar')}</p>
-          </Card>
-          <Card className="p-5">
-            <p className="text-xs text-text-muted">معدل الفوز</p>
-            <p className="mt-2 font-mono text-2xl font-bold text-text">{winRate}%</p>
-          </Card>
-          <Card className="p-5">
-            <p className="text-xs text-text-muted">متوسط قيمة العرض</p>
-            <p className="mt-2 font-mono text-xl font-bold text-text">{formatMoney(avgQuoteValue, 'SAR', 'ar')}</p>
-          </Card>
-        </div>
+        <Card className="p-5">
+          <h3 className="text-xs font-semibold text-text-muted">مؤشرات إضافية</h3>
+          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
+            {secondaryStats.map((s) => (
+              <div key={s.label} className="border-t border-border pt-2.5">
+                <dt className="text-[11px] text-text-muted">{s.label}</dt>
+                <dd className="mt-1 truncate font-mono text-sm font-bold text-text">{s.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </Card>
       </div>
 
       <div>

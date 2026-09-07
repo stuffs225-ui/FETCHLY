@@ -16,7 +16,7 @@ export default function Faq() {
     <section className="py-20">
       <div className="mx-auto max-w-3xl px-6 text-center lg:px-8">
         <span className="text-xs font-semibold uppercase tracking-[0.15em] text-primary">{t.faqPage.hero.eyebrow}</span>
-        <h1 className="mt-3 text-4xl font-extrabold tracking-tight text-text sm:text-5xl">{t.faqPage.hero.title}</h1>
+        <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-text sm:text-4xl">{t.faqPage.hero.title}</h1>
       </div>
       <div className="mx-auto mt-14 max-w-3xl px-6 lg:px-8">
         <Accordion items={items} />

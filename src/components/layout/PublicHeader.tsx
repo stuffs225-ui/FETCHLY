@@ -34,7 +34,7 @@ export default function PublicHeader() {
         scrolled ? 'border-border bg-ink/85 backdrop-blur-lg' : 'border-transparent bg-transparent',
       )}
     >
-      <div className="mx-auto flex h-18 max-w-7xl items-center justify-between px-6 py-3.5 lg:px-8">
+      <div className="mx-auto flex h-18 max-w-[1200px] items-center justify-between px-6 py-3.5 lg:px-8">
         <Logo />
 
         <nav className="hidden items-center gap-7 xl:flex">

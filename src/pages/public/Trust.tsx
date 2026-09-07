@@ -17,7 +17,7 @@ export default function Trust() {
       <section className="border-b border-border py-20 text-center">
         <div className="mx-auto max-w-3xl px-6 lg:px-8">
           <span className="text-xs font-semibold uppercase tracking-[0.15em] text-primary">{p.hero.eyebrow}</span>
-          <h1 className="mt-3 text-4xl font-extrabold tracking-tight text-text sm:text-5xl">{p.hero.title}</h1>
+          <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-text sm:text-4xl">{p.hero.title}</h1>
         </div>
       </section>
 

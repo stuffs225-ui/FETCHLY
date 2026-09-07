@@ -9,14 +9,23 @@ export default function CasesSection() {
 
   if (!cases || cases.length === 0) return null
 
+  // Layout responds to how many real cases exist — a single case reads as a
+  // wide feature block, two sit side by side, three or more form a grid.
+  const layoutClass =
+    cases.length === 1
+      ? 'mx-auto max-w-2xl'
+      : cases.length === 2
+        ? 'grid grid-cols-1 gap-6 sm:grid-cols-2'
+        : 'grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3'
+
   return (
-    <section className="border-t border-border bg-surface/60 py-24">
-      <div className="mx-auto max-w-6xl px-6 lg:px-8">
+    <section className="border-t border-border bg-surface/60 py-20">
+      <div className="mx-auto max-w-[1200px] px-6 lg:px-8">
         <h2 className="text-center text-3xl font-extrabold tracking-tight text-text sm:text-4xl">{t.cases.title}</h2>
 
-        <div className="mt-14 flex flex-wrap justify-center gap-6">
+        <div className={`mt-14 ${layoutClass}`}>
           {cases.map((c) => (
-            <Card key={c.id} className="w-full p-6 sm:w-[calc(50%-0.75rem)] lg:w-[calc(33.333%-1rem)]">
+            <Card key={c.id} className="p-6">
               <h3 className="text-lg font-bold text-text">{locale === 'ar' ? c.titleAr : c.titleEn}</h3>
               <dl className="mt-4 space-y-2.5 text-sm">
                 <div className="flex justify-between gap-3">

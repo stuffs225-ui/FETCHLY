@@ -10,7 +10,7 @@ export default function WhatWeSourceHome() {
 
   return (
     <section className="border-t border-border py-20">
-      <div className="mx-auto max-w-6xl px-6 lg:px-8">
+      <div className="mx-auto max-w-[1200px] px-6 lg:px-8">
         <h2 className="text-center text-3xl font-extrabold tracking-tight text-text sm:text-4xl">{t.whatWeSourceHome.title}</h2>
 
         <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-3">

@@ -12,15 +12,19 @@ export function Logo({ className, dark }: { className?: string; dark?: boolean }
   const logo = locale === 'ar' ? settings?.logoArDataUrl || settings?.logoDataUrl : settings?.logoDataUrl
 
   return (
-    <Link to="/" className={cn('flex items-center gap-2.5', className)}>
+    <Link to="/" className={cn('flex min-w-0 items-center gap-2.5', className)}>
       {logo ? (
-        <img src={logo} alt={name || 'logo'} className="h-9 w-auto object-contain" />
+        <img src={logo} alt={name || 'logo'} className="h-9 w-auto shrink-0 object-contain" />
       ) : (
-        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-navy">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-navy">
           {name ? <span className="font-bold text-white">{name.charAt(0)}</span> : <Globe2 className="h-4.5 w-4.5 text-white" />}
         </span>
       )}
-      {name && <span className={cn('text-lg font-extrabold tracking-tight', dark ? 'text-white' : 'text-text')}>{name}</span>}
+      {name && (
+        <span className={cn('truncate text-base font-extrabold tracking-tight sm:text-lg', dark ? 'text-white' : 'text-text')}>
+          {name}
+        </span>
+      )}
     </Link>
   )
 }

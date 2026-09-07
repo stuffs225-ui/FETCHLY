@@ -33,10 +33,10 @@ export default function Contact() {
   }
 
   return (
-    <section className="py-20">
+    <section className="py-16">
       <div className="mx-auto max-w-3xl px-6 text-center lg:px-8">
         <span className="text-xs font-semibold uppercase tracking-[0.15em] text-primary">{t.contactPage.hero.eyebrow}</span>
-        <h1 className="mt-3 text-4xl font-extrabold tracking-tight text-text sm:text-5xl">{t.contactPage.hero.title}</h1>
+        <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-text sm:text-4xl">{t.contactPage.hero.title}</h1>
         <div className="mt-8">
           <Button to="/request" size="lg">
             {t.contactPage.primaryCta} <DirArrow />

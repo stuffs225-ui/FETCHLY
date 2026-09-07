@@ -11,15 +11,15 @@ export default function HowItWorks() {
 
   return (
     <>
-      <section className="border-b border-border py-20 text-center">
+      <section className="border-b border-border py-16 text-center">
         <div className="mx-auto max-w-3xl px-6 lg:px-8">
           <span className="text-xs font-semibold uppercase tracking-[0.15em] text-primary">{t.howItWorksPage.hero.eyebrow}</span>
-          <h1 className="mt-3 text-4xl font-extrabold tracking-tight text-text sm:text-5xl">{t.howItWorksPage.hero.title}</h1>
+          <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-text sm:text-4xl">{t.howItWorksPage.hero.title}</h1>
           <p className="mt-5 text-lg text-text-muted">{t.howItWorksPage.hero.sub}</p>
         </div>
       </section>
 
-      <section className="py-20">
+      <section className="py-16">
         <div className="mx-auto max-w-4xl px-6 lg:px-8">
           <div className="grid grid-cols-1 gap-x-10 gap-y-10 sm:grid-cols-2">
             {t.howItWorksPage.steps.map((step) => (
@@ -41,7 +41,7 @@ export default function HowItWorks() {
         </div>
       </section>
 
-      <section className="border-t border-border bg-surface/60 py-20">
+      <section className="border-t border-border bg-surface/60 py-16">
         <div className="mx-auto max-w-3xl px-6 lg:px-8">
           <h2 className="text-center text-3xl font-extrabold tracking-tight text-text">{t.howItWorksPage.faqTitle}</h2>
           <div className="mt-10">

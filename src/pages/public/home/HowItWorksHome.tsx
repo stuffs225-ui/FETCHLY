@@ -7,7 +7,7 @@ export default function HowItWorksHome() {
 
   return (
     <section className="border-t border-border py-24">
-      <div className="mx-auto max-w-6xl px-6 lg:px-8">
+      <div className="mx-auto max-w-[1200px] px-6 lg:px-8">
         <h2 className="text-center text-3xl font-extrabold tracking-tight text-text sm:text-4xl">{t.howItWorksHome.title}</h2>
 
         <div className="relative mt-16 grid grid-cols-1 gap-8 sm:grid-cols-3">

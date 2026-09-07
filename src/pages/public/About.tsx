@@ -1,3 +1,4 @@
+import { CheckCircle2 } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import { Button } from '@/components/ui/Button'
 import { DirArrow } from '@/components/ui/DirArrow'
@@ -33,6 +34,33 @@ export default function About() {
                 {i < p.whatWeDo.steps.length - 1 && <DirArrow className="h-4 w-4 text-text-muted" />}
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-border py-16">
+        <div className="mx-auto grid max-w-4xl grid-cols-1 gap-10 px-6 sm:grid-cols-2 lg:px-8">
+          <div>
+            <h2 className="text-lg font-bold text-text">{p.whoWeServe.title}</h2>
+            <ul className="mt-5 space-y-3.5">
+              {p.whoWeServe.items.map((item) => (
+                <li key={item} className="flex items-start gap-2.5 text-sm leading-relaxed text-text-muted">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-text">{p.sourcingScope.title}</h2>
+            <ul className="mt-5 space-y-3.5">
+              {p.sourcingScope.items.map((item) => (
+                <li key={item} className="flex items-start gap-2.5 text-sm leading-relaxed text-text-muted">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  {item}
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>

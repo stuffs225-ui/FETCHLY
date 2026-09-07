@@ -257,6 +257,24 @@ export const en: Dict = {
       title: 'What Do We Do?',
       steps: ['Send what you need', 'We search for it', 'We send you a quote'],
     },
+    whoWeServe: {
+      title: 'Who We Serve',
+      items: [
+        'Companies and organizations sourcing products that are hard to find locally.',
+        'Factories and industrial facilities in need of operational parts and components.',
+        'Medical and healthcare facilities in need of medical and lab equipment.',
+        'Procurement departments and suppliers looking for a single sourcing partner for multiple requests.',
+      ],
+    },
+    sourcingScope: {
+      title: 'Scope of Sourcing',
+      items: [
+        'We source from global markets: the United States, the United Kingdom, Europe, and Asia.',
+        'We handle requests specified by part number or exact specifications.',
+        'Every request is reviewed before a quotation is sent, to confirm it matches the specifications.',
+        'Sourcing covers only products that can be legally imported into the Kingdom.',
+      ],
+    },
     closing: { title: 'Looking for a product?', cta: 'Request a Quote' },
   },
   trustPage: {

@@ -1,6 +1,5 @@
 import { Factory, Wrench, Package, Stethoscope, Cpu, Droplet, PackagePlus } from 'lucide-react'
 import { useI18n } from '@/i18n'
-import { CardHover } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { DirArrow } from '@/components/ui/DirArrow'
 import { usePageTitle } from '@/lib/usePageTitle'
@@ -13,36 +12,42 @@ export default function WhatWeSource() {
 
   return (
     <>
-      <section className="border-b border-border py-20 text-center">
+      <section className="border-b border-border py-16 text-center">
         <div className="mx-auto max-w-3xl px-6 lg:px-8">
           <span className="text-xs font-semibold uppercase tracking-[0.15em] text-primary">{t.whatWeSourcePage.hero.eyebrow}</span>
-          <h1 className="mt-3 text-balance text-4xl font-extrabold tracking-tight text-text sm:text-5xl">{t.whatWeSourcePage.hero.title}</h1>
+          <h1 className="mt-3 text-balance text-3xl font-extrabold tracking-tight text-text sm:text-4xl">{t.whatWeSourcePage.hero.title}</h1>
           <p className="mt-5 text-lg text-text-muted">{t.whatWeSourcePage.hero.sub}</p>
         </div>
       </section>
 
-      <section className="py-20">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="py-16">
+        <div className="mx-auto max-w-[1200px] px-6 lg:px-8">
+          <div className="divide-y divide-border border-t border-border">
             {t.whatWeSourcePage.categories.map((cat, i) => {
               const Icon = icons[i % icons.length]
               return (
-                <CardHover key={cat.title} className="p-7">
-                  <Icon className="h-6 w-6 text-primary" />
-                  <h3 className="mt-4 text-lg font-bold text-text">{cat.title}</h3>
-                  <p className="mt-1.5 text-sm text-text-muted">{cat.desc}</p>
-                </CardHover>
+                <div key={cat.title} className="flex flex-col gap-3 py-6 sm:flex-row sm:items-start sm:gap-8">
+                  <div className="flex items-center gap-3 sm:w-72 sm:shrink-0">
+                    <Icon className="h-5 w-5 shrink-0 text-primary" />
+                    <h3 className="text-base font-bold text-text">{cat.title}</h3>
+                  </div>
+                  <p className="text-sm leading-relaxed text-text-muted sm:flex-1">{cat.desc}</p>
+                </div>
               )
             })}
+          </div>
 
-            <div className="flex flex-col items-start justify-center gap-2 rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-7">
-              <PackagePlus className="h-6 w-6 text-primary" />
-              <h3 className="text-lg font-bold text-text">{t.whatWeSourcePage.otherTitle}</h3>
-              <p className="text-sm text-text-muted">{t.whatWeSourcePage.otherDesc}</p>
-              <Button to="/request" variant="secondary" size="sm" className="mt-2">
-                {t.nav.requestQuote} <DirArrow />
-              </Button>
+          <div className="mt-8 flex flex-col items-start gap-2 border-t border-dashed border-primary/30 pt-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <PackagePlus className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+              <div>
+                <h3 className="text-base font-bold text-text">{t.whatWeSourcePage.otherTitle}</h3>
+                <p className="mt-0.5 text-sm text-text-muted">{t.whatWeSourcePage.otherDesc}</p>
+              </div>
             </div>
+            <Button to="/request" variant="secondary" size="sm" className="shrink-0">
+              {t.nav.requestQuote} <DirArrow />
+            </Button>
           </div>
         </div>
       </section>

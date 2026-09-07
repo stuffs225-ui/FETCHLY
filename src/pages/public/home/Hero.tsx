@@ -12,8 +12,8 @@ export default function Hero() {
   const sub = (locale === 'ar' ? overrides?.heroSubAr : overrides?.heroSubEn) || t.hero.sub
 
   return (
-    <section className="relative overflow-hidden py-16 sm:py-20">
-      <div className="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-6 lg:grid-cols-[3fr_2fr] lg:gap-10 lg:px-8">
+    <section className="relative overflow-hidden py-14 sm:py-16">
+      <div className="relative mx-auto grid max-w-[1200px] grid-cols-1 items-center gap-12 px-6 lg:grid-cols-[3fr_2fr] lg:gap-10 lg:px-8">
         <div className="text-center lg:text-start">
           <h1 className="text-balance text-4xl font-extrabold leading-[1.2] tracking-tight text-text sm:text-5xl">
             {headline}
@@ -23,7 +23,7 @@ export default function Hero() {
             {sub}
           </p>
 
-          <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row lg:justify-start">
+          <div className="mt-7 flex flex-col items-center justify-center gap-4 sm:flex-row lg:justify-start">
             <Button to="/request" size="lg">
               {t.hero.ctaPrimary} <DirArrow />
             </Button>
@@ -32,7 +32,7 @@ export default function Hero() {
             </Button>
           </div>
 
-          <div className="mt-7 flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5 text-sm font-medium text-text-muted lg:justify-start">
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5 text-sm font-medium text-text-muted lg:justify-start">
             {t.hero.tags.map((tag, i) => (
               <span key={tag} className="flex items-center gap-2">
                 {i > 0 && <span className="text-border-light">•</span>}

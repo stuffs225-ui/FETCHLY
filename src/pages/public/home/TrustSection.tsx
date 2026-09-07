@@ -14,7 +14,7 @@ export default function TrustSection() {
 
   return (
     <section className="border-y border-border bg-surface py-10">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+      <div className="mx-auto max-w-[1200px] px-6 lg:px-8">
         <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
           <div className="flex items-center gap-2.5 text-sm font-semibold text-text">
             <BadgeCheck className="h-4.5 w-4.5 text-emerald" />
