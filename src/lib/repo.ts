@@ -8,6 +8,8 @@ import type {
   SavedTerm,
   SourcingCase,
   FaqItem,
+  Brand,
+  Product,
   Credential,
   CompanySettings,
   EmailSettings,
@@ -73,6 +75,8 @@ export const savedTermsRepo = createResource<SavedTerm>('/cms/saved-terms')
 // ---------------------------------------------------------------------------
 
 export const casesRepo = createResource<SourcingCase>('/cms/cases')
+export const brandsRepo = createResource<Brand>('/cms/brands')
+export const productsRepo = createResource<Product>('/cms/products')
 export const faqsRepo = createResource<FaqItem>('/cms/faqs')
 export const credentialsRepo = createResource<Credential>('/cms/credentials')
 
@@ -92,6 +96,14 @@ export async function getPublicContent(): Promise<ContentOverrides> {
 
 export async function getPublicCases(): Promise<SourcingCase[]> {
   return api.get<SourcingCase[]>('/public/cases')
+}
+
+export async function getPublicBrands(): Promise<Brand[]> {
+  return api.get<Brand[]>('/public/brands')
+}
+
+export async function getPublicProducts(): Promise<Product[]> {
+  return api.get<Product[]>('/public/products')
 }
 
 export async function getPublicFaqs(): Promise<FaqItem[]> {

@@ -86,6 +86,8 @@ export default function PublicFooter() {
               <FooterGroup title={t.footer.servicesHeading}>
                 <ul className="space-y-3 text-sm">
                   <li><Link to="/request" className="text-white/60 hover:text-white">{t.footer.links.requestQuote}</Link></li>
+                  <li><Link to="/products" className="text-white/60 hover:text-white">{t.nav.products}</Link></li>
+                  <li><Link to="/brands" className="text-white/60 hover:text-white">{t.nav.brands}</Link></li>
                   <li><Link to="/what-we-source" className="text-white/60 hover:text-white">{t.footer.links.whatWeSource}</Link></li>
                   <li><Link to="/faq" className="text-white/60 hover:text-white">{t.footer.links.faq}</Link></li>
                 </ul>

@@ -5,6 +5,8 @@ export const ar = {
     locale: 'ar-SA',
   },
   nav: {
+    products: 'المنتجات',
+    brands: 'العلامات التجارية',
     home: 'الرئيسية',
     howItWorks: 'كيف نعمل',
     whatWeSource: 'ماذا نوفر',

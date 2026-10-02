@@ -12,6 +12,10 @@ import Trust from '@/pages/public/Trust'
 import Faq from '@/pages/public/Faq'
 import Contact from '@/pages/public/Contact'
 import RequestPage from '@/pages/public/RequestPage'
+import Products from '@/pages/public/Products'
+import ProductDetail from '@/pages/public/ProductDetail'
+import Brands from '@/pages/public/Brands'
+import BrandDetail from '@/pages/public/BrandDetail'
 import NotFound from '@/pages/public/NotFound'
 import LegalPage from '@/pages/legal/LegalPage'
 
@@ -24,6 +28,8 @@ const Quotations = lazy(() => import('@/pages/admin/Quotations'))
 const QuotationEditor = lazy(() => import('@/pages/admin/quotations/QuotationEditor'))
 const SavedProducts = lazy(() => import('@/pages/admin/SavedProducts'))
 const Cases = lazy(() => import('@/pages/admin/Cases'))
+const AdminBrands = lazy(() => import('@/pages/admin/Brands'))
+const AdminProducts = lazy(() => import('@/pages/admin/Products'))
 const Faqs = lazy(() => import('@/pages/admin/Faqs'))
 const AdminTrust = lazy(() => import('@/pages/admin/Trust'))
 const WebsiteContent = lazy(() => import('@/pages/admin/WebsiteContent'))
@@ -43,6 +49,10 @@ export default function App() {
         <Routes>
           <Route element={<PublicLayout />}>
             <Route path="/" element={<Home />} />
+            <Route path="/products" element={<Products />} />
+            <Route path="/products/:slug" element={<ProductDetail />} />
+            <Route path="/brands" element={<Brands />} />
+            <Route path="/brands/:slug" element={<BrandDetail />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/what-we-source" element={<WhatWeSource />} />
             <Route path="/about" element={<About />} />
@@ -68,6 +78,8 @@ export default function App() {
             <Route path="quotations" element={<Quotations />} />
             <Route path="quotations/:id" element={<QuotationEditor />} />
             <Route path="saved-products" element={<SavedProducts />} />
+            <Route path="brands" element={<AdminBrands />} />
+            <Route path="products" element={<AdminProducts />} />
             <Route path="cases" element={<Cases />} />
             <Route path="faqs" element={<Faqs />} />
             <Route path="trust" element={<AdminTrust />} />

@@ -32,3 +32,17 @@ export const savedTermsRouter = createCrudRouter({
   label: 'شرط محفوظ',
   columns: ['kind', 'label', 'value'],
 })
+
+export const brandsRouter = createCrudRouter({
+  table: 'brands',
+  label: 'علامة تجارية',
+  boolColumns: ['featured', 'published'],
+  columns: ['slug', 'name', 'country', 'color', 'descAr', 'descEn', 'website', 'logoUrl', 'featured', 'published', 'sortOrder'],
+})
+
+export const productsRouter = createCrudRouter({
+  table: 'products',
+  label: 'منتج',
+  boolColumns: ['featured', 'published'],
+  columns: ['slug', 'brandId', 'category', 'nameAr', 'nameEn', 'descAr', 'descEn', 'specsAr', 'specsEn', 'partNumber', 'imageUrl', 'featured', 'published', 'sortOrder'],
+})

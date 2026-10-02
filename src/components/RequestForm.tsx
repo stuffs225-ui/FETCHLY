@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { ChevronDown, CheckCircle2, Copy, Check, AlertCircle } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import { Button } from '@/components/ui/Button'
@@ -44,7 +45,13 @@ const initial: FormState = {
 
 export function RequestForm() {
   const { t, locale } = useI18n()
-  const [form, setForm] = useState<FormState>(initial)
+  const [searchParams] = useSearchParams()
+  const [form, setForm] = useState<FormState>(() => ({
+    ...initial,
+    productName: searchParams.get('productName') ?? '',
+    brand: searchParams.get('brand') ?? '',
+    partNumber: searchParams.get('partNumber') ?? '',
+  }))
   const [files, setFiles] = useState<PendingFile[]>([])
   const [consent, setConsent] = useState(false)
   const [showMore, setShowMore] = useState(false)

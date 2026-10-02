@@ -7,6 +7,8 @@ export const en: Dict = {
     locale: 'en-US',
   },
   nav: {
+    products: 'Products',
+    brands: 'Brands',
     home: 'Home',
     howItWorks: 'How It Works',
     whatWeSource: 'What We Source',

@@ -224,3 +224,36 @@ export interface AdminUser {
   email: string
   role: 'admin' | 'sales'
 }
+
+export interface Brand {
+  id: string
+  slug: string
+  name: string
+  country: string | null
+  color: string | null
+  descAr: string | null
+  descEn: string | null
+  website: string | null
+  logoUrl: string | null
+  featured: boolean
+  published: boolean
+  sortOrder: number
+}
+
+export interface Product {
+  id: string
+  slug: string
+  brandId: string
+  category: string
+  nameAr: string
+  nameEn: string
+  descAr: string | null
+  descEn: string | null
+  specsAr: string | null
+  specsEn: string | null
+  partNumber: string | null
+  imageUrl: string | null
+  featured: boolean
+  published: boolean
+  sortOrder: number
+}

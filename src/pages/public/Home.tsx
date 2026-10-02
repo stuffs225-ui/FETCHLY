@@ -2,6 +2,8 @@ import { usePageTitle } from '@/lib/usePageTitle'
 import Hero from './home/Hero'
 import TrustSection from './home/TrustSection'
 import SendAnyway from './home/SendAnyway'
+import BrandsStrip from './home/BrandsStrip'
+import FeaturedProducts from './home/FeaturedProducts'
 import WhatWeSourceHome from './home/WhatWeSourceHome'
 import HowItWorksHome from './home/HowItWorksHome'
 import WhyUs from './home/WhyUs'
@@ -18,6 +20,8 @@ export default function Home() {
       <Hero />
       <TrustSection />
       <SendAnyway />
+      <BrandsStrip />
+      <FeaturedProducts />
       <WhatWeSourceHome />
       <HowItWorksHome />
       <WhyUs />

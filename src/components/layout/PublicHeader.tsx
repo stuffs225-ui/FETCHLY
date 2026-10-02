@@ -19,8 +19,9 @@ export default function PublicHeader() {
   }, [])
 
   const navLinks = [
+    { to: '/products', label: t.nav.products },
+    { to: '/brands', label: t.nav.brands },
     { to: '/how-it-works', label: t.nav.howItWorks },
-    { to: '/what-we-source', label: t.nav.whatWeSource },
     { to: '/about', label: t.nav.about },
     { to: '/trust', label: t.nav.trust },
     { to: '/faq', label: t.nav.faq },

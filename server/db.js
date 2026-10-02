@@ -4,6 +4,7 @@ import path from 'node:path'
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import crypto from 'node:crypto'
+import { brands, products } from './seed/catalog.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const dataDir = path.join(__dirname, 'data')
@@ -135,6 +136,39 @@ CREATE TABLE IF NOT EXISTS cases (
   published INTEGER NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS brands (
+  id TEXT PRIMARY KEY,
+  slug TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  country TEXT,
+  color TEXT,
+  descAr TEXT,
+  descEn TEXT,
+  website TEXT,
+  logoUrl TEXT,
+  featured INTEGER NOT NULL DEFAULT 0,
+  published INTEGER NOT NULL DEFAULT 1,
+  sortOrder INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS products (
+  id TEXT PRIMARY KEY,
+  slug TEXT NOT NULL UNIQUE,
+  brandId TEXT NOT NULL,
+  category TEXT NOT NULL,
+  nameAr TEXT NOT NULL,
+  nameEn TEXT NOT NULL,
+  descAr TEXT,
+  descEn TEXT,
+  specsAr TEXT,
+  specsEn TEXT,
+  partNumber TEXT,
+  imageUrl TEXT,
+  featured INTEGER NOT NULL DEFAULT 0,
+  published INTEGER NOT NULL DEFAULT 1,
+  sortOrder INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS faqs (
   id TEXT PRIMARY KEY,
   qAr TEXT NOT NULL,
@@ -254,6 +288,31 @@ if (credCount === 0) {
   for (const [key, labelAr, labelEn] of defaultCredentials) {
     insertCred.run(crypto.randomUUID(), key, labelAr, labelEn)
   }
+}
+
+if (db.prepare('SELECT COUNT(*) as n FROM brands').get().n === 0) {
+  const insertBrand = db.prepare(
+    `INSERT INTO brands (id, slug, name, country, color, descAr, descEn, website, featured, sortOrder)
+     VALUES (@id, @slug, @name, 'US', @color, @descAr, @descEn, @website, @featured, @sortOrder)`
+  )
+  const insertProduct = db.prepare(
+    `INSERT INTO products (id, slug, brandId, category, nameAr, nameEn, descAr, descEn, specsAr, specsEn, featured, sortOrder)
+     VALUES (@id, @slug, @brandId, @category, @nameAr, @nameEn, @descAr, @descEn, @specsAr, @specsEn, @featured, @sortOrder)`
+  )
+  const brandIds = {}
+  db.transaction(() => {
+    brands.forEach(([slug, name, , color, descAr, descEn, website], i) => {
+      const id = crypto.randomUUID()
+      brandIds[slug] = id
+      insertBrand.run({ id, slug, name, color, descAr, descEn, website, featured: i < 12 ? 1 : 0, sortOrder: i })
+    })
+    products.forEach(([slug, brandSlug, category, nameEn, nameAr, descEn, descAr, specsEn, specsAr, featured], i) => {
+      insertProduct.run({
+        id: crypto.randomUUID(), slug, brandId: brandIds[brandSlug], category, nameAr, nameEn,
+        descAr, descEn, specsAr, specsEn, featured, sortOrder: i,
+      })
+    })
+  })()
 }
 
 export function nextRequestNumber() {

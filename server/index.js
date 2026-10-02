@@ -18,7 +18,7 @@ import { settingsRouter } from './routes/settings.js'
 import { publicRouter } from './routes/public.js'
 import { usersRouter } from './routes/users.js'
 import { logsRouter } from './routes/logs.js'
-import { casesRouter, faqsRouter, credentialsRouter, savedProductsRouter, savedTermsRouter } from './routes/cms.js'
+import { casesRouter, faqsRouter, credentialsRouter, savedProductsRouter, savedTermsRouter, brandsRouter, productsRouter } from './routes/cms.js'
 import { contactRouter } from './routes/contact.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -78,6 +78,8 @@ app.use('/api/cms/faqs', faqsRouter)
 app.use('/api/cms/credentials', credentialsRouter)
 app.use('/api/cms/saved-products', savedProductsRouter)
 app.use('/api/cms/saved-terms', savedTermsRouter)
+app.use('/api/cms/brands', brandsRouter)
+app.use('/api/cms/products', productsRouter)
 
 app.use((err, _req, res, next) => {
   if (err instanceof multer.MulterError) {

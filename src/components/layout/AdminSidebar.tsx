@@ -1,6 +1,6 @@
 import { NavLink, Link } from 'react-router-dom'
 import { Globe2,
-  LayoutDashboard, ClipboardList, FileSpreadsheet, Boxes, MapPinned, HelpCircle, ShieldCheck, FileCog, Building2, Mail, Users, LogOut,
+  LayoutDashboard, ClipboardList, FileSpreadsheet, Boxes, Package, Tags, MapPinned, HelpCircle, ShieldCheck, FileCog, Building2, Mail, Users, LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getCompanySettings } from '@/lib/repo'
@@ -10,6 +10,8 @@ const links = [
   { to: '/admin/dashboard', label: 'الرئيسية', icon: LayoutDashboard },
   { to: '/admin/requests', label: 'الطلبات', icon: ClipboardList },
   { to: '/admin/quotations', label: 'عروض الأسعار', icon: FileSpreadsheet },
+  { to: '/admin/products', label: 'المنتجات', icon: Package },
+  { to: '/admin/brands', label: 'العلامات التجارية', icon: Tags },
   { to: '/admin/saved-products', label: 'المنتجات المحفوظة', icon: Boxes },
   { to: '/admin/cases', label: 'حالات التوريد', icon: MapPinned },
   { to: '/admin/faqs', label: 'الأسئلة الشائعة', icon: HelpCircle },
