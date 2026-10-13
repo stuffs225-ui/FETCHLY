@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Eye, EyeOff } from 'lucide-react'
 import { HeartShape } from './Heart'
+import { LinkCard } from './LinkCard'
 import { api, ApiError } from '@/lib/api'
 import { makeCopy } from '@/lib/copy'
 import type { Profile, Who } from '@/lib/types'
 
-type Stage = { name: 'loading' } | { name: 'nolink' } | { name: 'invalid' } | { name: 'form'; who: Who; needsPassword: boolean }
+type Stage = { name: 'loading' } | { name: 'setup'; links: Record<Who, string> } | { name: 'nolink' } | { name: 'invalid' } | { name: 'form'; who: Who; needsPassword: boolean }
 
 /**
  * The door. It opens only from a person's private link (?k=…). The first time
@@ -14,7 +15,7 @@ type Stage = { name: 'loading' } | { name: 'nolink' } | { name: 'invalid' } | { 
  */
 export function Join({ onEnter }: { onEnter: (p: Profile) => void }) {
   const token = new URLSearchParams(location.search).get('k')
-  const [stage, setStage] = useState<Stage>(token ? { name: 'loading' } : { name: 'nolink' })
+  const [stage, setStage] = useState<Stage>({ name: 'loading' })
   const [password, setPassword] = useState('')
   const [show, setShow] = useState(false)
   const [error, setError] = useState('')
@@ -22,7 +23,13 @@ export function Join({ onEnter }: { onEnter: (p: Profile) => void }) {
   const [shake, setShake] = useState(0)
 
   useEffect(() => {
-    if (!token) return
+    if (!token) {
+      // No private link: if nobody has set up yet, show both links (first run only); otherwise a quiet "use your link" note.
+      api.get<{ links: Record<Who, string> }>('/setup')
+        .then((r) => setStage({ name: 'setup', links: r.links }))
+        .catch(() => setStage({ name: 'nolink' }))
+      return
+    }
     api.get<{ who: Who; needsPassword: boolean }>(`/join?k=${encodeURIComponent(token)}`)
       .then((r) => setStage({ name: 'form', who: r.who, needsPassword: r.needsPassword }))
       .catch(() => setStage({ name: 'invalid' }))
@@ -64,6 +71,17 @@ export function Join({ onEnter }: { onEnter: (p: Profile) => void }) {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="mt-6 text-center">
           <p className="text-lg text-ink">{message[0]}</p>
           <p className="mt-1.5 text-sm text-mist">{message[1]}</p>
+        </motion.div>
+      )}
+
+      {stage.name === 'setup' && (
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.9 }} className="mt-7 w-full max-w-sm space-y-3">
+          <p className="text-center text-lg text-ink">جاهز! خطوتان فقط</p>
+          <a href={`/?k=${stage.links.b}`} className="block rounded-2xl bg-accent py-3.5 text-center text-base font-bold text-on-accent active:scale-[0.98]">
+            ١) افتح رابطك أنت واختر كلمة سرّ
+          </a>
+          <LinkCard receiver="a" keyValue={stage.links.a} title="٢) أرسل رابطها لها" />
+          <p className="px-2 text-center text-xs leading-6 text-mist">بعد أن تفتح رابطك وتختار كلمة السرّ، تختفي هذه الصفحة، ولن يُعرض الرابطان لأحد بعدها.</p>
         </motion.div>
       )}
 

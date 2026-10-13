@@ -188,7 +188,7 @@ function Home({ profile, onTogether }: { profile: Profile; onTogether: (v: boole
         </div>
       </nav>
 
-      <Settings open={settings} onClose={() => setSettings(false)} haptics={haptics} setHaptics={setHaptics} sound={sound} setSound={setSound} theme={theme} setTheme={setTheme} loc={loc} />
+      <Settings open={settings} onClose={() => setSettings(false)} haptics={haptics} setHaptics={setHaptics} sound={sound} setSound={setSound} theme={theme} setTheme={setTheme} loc={loc} partner={profile.partner} />
     </div>
   )
 }

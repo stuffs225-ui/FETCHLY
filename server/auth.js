@@ -46,15 +46,19 @@ export function checkPassword(who, password) {
   return safeEqual(hashPassword(password, row.passSalt), row.passHash)
 }
 
+export function anyPasswordSet() {
+  return db.prepare('SELECT 1 FROM slots WHERE passHash IS NOT NULL LIMIT 1').get() !== undefined
+}
+
 export function resetPassword(who) {
   db.prepare('DELETE FROM slots WHERE who = ?').run(who)
 }
 
 const sign = (value) => crypto.createHmac('sha256', secret).update(value).digest('base64url')
 
-export function issueCookie(res, who) {
+export function issueCookie(req, res, who) {
   const value = `${who}.${Date.now()}`
-  res.cookie(COOKIE, `${value}.${sign(value)}`, { httpOnly: true, sameSite: 'lax', secure: isProduction, maxAge: MAX_AGE, path: '/' })
+  res.cookie(COOKIE, `${value}.${sign(value)}`, { httpOnly: true, sameSite: 'lax', secure: req.secure, maxAge: MAX_AGE, path: '/' })
 }
 
 function parseCookies(header = '') {

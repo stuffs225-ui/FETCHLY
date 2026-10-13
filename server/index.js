@@ -7,7 +7,7 @@ import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { db, togetherStats } from './db.js'
 import {
-  isProduction, linkTokens, whoForToken, hasPassword, setPassword, checkPassword, issueCookie, requireMe, sameOrigin,
+  isProduction, linkTokens, anyPasswordSet, whoForToken, hasPassword, setPassword, checkPassword, issueCookie, requireMe, sameOrigin,
   whoFromCookieHeader, partnerOf,
 } from './auth.js'
 import { attachLive, stateOf, waitingFor } from './live.js'
@@ -60,9 +60,19 @@ app.post('/api/join', joinLimiter, express.json({ limit: '2kb' }), (req, res) =>
   } else if (!checkPassword(who, password)) {
     return res.status(401).json({ error: 'wrong' })
   }
-  issueCookie(res, who)
+  issueCookie(req, res, who)
   res.json(profile(who))
 })
+
+// First-run helper: until the first person has chosen a password, the home page can show both private links
+// so the owner can simply open the site and forward the other person's link. After that it is closed for good.
+app.get('/api/setup', joinLimiter, (_req, res) => {
+  if (anyPasswordSet()) return res.status(404).json({ error: 'done' })
+  res.json({ links: { a: linkTokens.a, b: linkTokens.b } })
+})
+
+// Lets a logged-in person re-send the other person's link (e.g. if it was lost).
+app.get('/api/partner-link', requireMe, (req, res) => res.json({ key: linkTokens[partnerOf(req.who)] }))
 
 app.get('/api/me', (req, res) => {
   const who = whoFromCookieHeader(req.headers.cookie)

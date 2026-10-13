@@ -1,5 +1,9 @@
+import { useEffect, useState } from 'react'
 import { MapPin, MapPinOff, Smartphone, Volume2, Check } from 'lucide-react'
 import { Sheet } from './Sheet'
+import { LinkCard } from './LinkCard'
+import { api } from '@/lib/api'
+import type { Who } from '@/lib/types'
 import { THEMES } from '@/lib/theme'
 import type { ThemeKey } from '@/lib/theme'
 import type { LocStatus } from '@/lib/location'
@@ -29,10 +33,15 @@ interface Props {
   theme: ThemeKey
   setTheme: (k: ThemeKey) => void
   loc: { status: LocStatus; enable: () => void; disable: () => void }
+  partner: Who
 }
 
-export function Settings({ open, onClose, haptics, setHaptics, sound, setSound, theme, setTheme, loc }: Props) {
+export function Settings({ open, onClose, haptics, setHaptics, sound, setSound, theme, setTheme, loc, partner }: Props) {
   const locOn = loc.status === 'on'
+  const [partnerKey, setPartnerKey] = useState<string | null>(null)
+  useEffect(() => {
+    if (open) api.get<{ key: string }>('/partner-link').then((r) => setPartnerKey(r.key)).catch(() => {})
+  }, [open])
   return (
     <Sheet open={open} onClose={onClose} title="الإعدادات">
       <div className="space-y-3">
@@ -62,6 +71,7 @@ export function Settings({ open, onClose, haptics, setHaptics, sound, setSound, 
           />
         )}
         <Toggle on={haptics} onChange={setHaptics} label="اهتزاز مع كل نبضة عندما تكونان معًا" icon={<Smartphone className="h-5 w-5" />} />
+        {partnerKey && <LinkCard receiver={partner} keyValue={partnerKey} title={partner === 'a' ? 'إعادة إرسال رابطها' : 'إعادة إرسال رابطه'} />}
         <Toggle on={sound} onChange={(v) => { if (v) void import('@/lib/sound').then((m) => m.unlockSound()); setSound(v) }} label="صوت نبض القلب" hint="هادئ ومنخفض" icon={<Volume2 className="h-5 w-5" />} />
       </div>
     </Sheet>
