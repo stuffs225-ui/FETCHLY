@@ -1,108 +1,121 @@
 import 'dotenv/config'
 import express from 'express'
-import session from 'express-session'
-import cors from 'cors'
-import cookieParser from 'cookie-parser'
+import rateLimit from 'express-rate-limit'
+import http from 'node:http'
 import path from 'node:path'
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import multer from 'multer'
-import rateLimit from 'express-rate-limit'
-
-import { bootstrapAdmin } from './db.js'
-import { SqliteSessionStore } from './lib/sqliteSessionStore.js'
-import { authRouter } from './routes/auth.js'
-import { requestsRouter } from './routes/requests.js'
-import { quotationsRouter } from './routes/quotations.js'
-import { settingsRouter } from './routes/settings.js'
-import { publicRouter } from './routes/public.js'
-import { usersRouter } from './routes/users.js'
-import { logsRouter } from './routes/logs.js'
-import { casesRouter, faqsRouter, credentialsRouter, savedProductsRouter, savedTermsRouter, brandsRouter, productsRouter } from './routes/cms.js'
-import { contactRouter } from './routes/contact.js'
+import { db, setSetting, togetherStats } from './db.js'
+import {
+  config, names, isProduction, requireMe, sameOrigin, safeEqual, issueCookie, clearCookie, whoFromCookieHeader, partnerOf,
+} from './auth.js'
+import { attachLive, stateOf, waitingFor } from './live.js'
+import { bottlesRouter } from './bottles.js'
+import { initPush, vapidPublicKey, saveSubscription, removeSubscription } from './push.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-bootstrapAdmin()
 
-const app = express()
-app.set('trust proxy', 1)
-
-const isProduction = process.env.NODE_ENV === 'production'
-const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
-
-app.use(cors({ origin: frontendUrl, credentials: true }))
-app.use(cookieParser())
-app.use(express.json({ limit: '15mb' }))
-app.use(express.urlencoded({ extended: true }))
-
-const sessionSecret = process.env.SESSION_SECRET
-if (!sessionSecret && isProduction) {
-  console.error('[startup] SESSION_SECRET must be set in production. Refusing to start with an insecure default.')
+if (!config.passphrase) {
+  console.error('[startup] ROOM_PASSPHRASE must be set in production — it is the secret that keeps this place private.')
   process.exit(1)
 }
 
-app.use(
-  session({
-    store: new SqliteSessionStore(),
-    name: 'fetchly.sid',
-    secret: sessionSecret || 'dev-only-insecure-secret',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'lax',
-      maxAge: 24 * 60 * 60 * 1000,
-    },
+initPush()
+
+const app = express()
+app.disable('x-powered-by')
+app.set('trust proxy', 1)
+app.use(sameOrigin)
+
+app.use((_req, res, next) => {
+  res.set({
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'no-referrer',
+    'X-Frame-Options': 'DENY',
+    'Permissions-Policy': 'microphone=(self), camera=(), geolocation=()',
   })
-)
-
-const publicWriteLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'too_many_requests' },
-})
-
-app.use('/api/auth', authRouter)
-app.use('/api/requests', (req, res, next) => (req.method === 'POST' ? publicWriteLimiter(req, res, next) : next()), requestsRouter)
-app.use('/api/contact', publicWriteLimiter, contactRouter)
-app.use('/api/quotations', quotationsRouter)
-app.use('/api/settings', settingsRouter)
-app.use('/api/public', publicRouter)
-app.use('/api/users', usersRouter)
-app.use('/api/logs', logsRouter)
-app.use('/api/cms/cases', casesRouter)
-app.use('/api/cms/faqs', faqsRouter)
-app.use('/api/cms/credentials', credentialsRouter)
-app.use('/api/cms/saved-products', savedProductsRouter)
-app.use('/api/cms/saved-terms', savedTermsRouter)
-app.use('/api/cms/brands', brandsRouter)
-app.use('/api/cms/products', productsRouter)
-
-app.use((err, _req, res, next) => {
-  if (err instanceof multer.MulterError) {
-    return res.status(400).json({ error: 'upload_error', detail: err.message })
-  }
-  if (err) {
-    console.error(err)
-    return res.status(400).json({ error: 'bad_request', detail: err.message })
-  }
   next()
 })
 
-if (isProduction) {
-  const distDir = path.join(__dirname, '../dist')
-  if (fs.existsSync(distDir)) {
-    app.use(express.static(distDir))
-    app.get(/^(?!\/api).*/, (_req, res) => {
-      res.sendFile(path.join(distDir, 'index.html'))
-    })
+const enterLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'too_many_attempts' },
+})
+
+const profile = (who) => ({
+  who,
+  partner: partnerOf(who),
+  names: names(),
+  genders: config.genders,
+})
+
+app.post('/api/enter', enterLimiter, express.json({ limit: '2kb' }), (req, res) => {
+  const { passphrase, who } = req.body ?? {}
+  if ((who !== 'a' && who !== 'b') || typeof passphrase !== 'string' || !safeEqual(passphrase, config.passphrase)) {
+    return res.status(401).json({ error: 'wrong' })
   }
+  issueCookie(res, who)
+  res.json(profile(who))
+})
+
+app.post('/api/leave', (_req, res) => {
+  clearCookie(res)
+  res.status(204).end()
+})
+
+app.get('/api/me', (req, res) => {
+  const who = whoFromCookieHeader(req.headers.cookie)
+  if (!who) return res.status(401).json({ error: 'unauthorized' })
+  res.json({ ...profile(who), together: togetherStats(), waiting: waitingFor(who), partnerState: stateOf(partnerOf(who)) })
+})
+
+app.put('/api/profile', requireMe, express.json({ limit: '2kb' }), (req, res) => {
+  const name = String(req.body?.name ?? '').trim().slice(0, 24)
+  if (!name) return res.status(400).json({ error: 'empty' })
+  setSetting(`name_${req.who}`, name)
+  res.json(profile(req.who))
+})
+
+app.get('/api/push/key', requireMe, (_req, res) => res.json({ key: vapidPublicKey() }))
+app.post('/api/push/subscribe', requireMe, express.json({ limit: '4kb' }), (req, res) => {
+  const sub = req.body
+  if (!sub?.endpoint || !sub?.keys?.p256dh || !sub?.keys?.auth) return res.status(400).json({ error: 'bad_subscription' })
+  saveSubscription(req.who, sub)
+  res.status(204).end()
+})
+app.post('/api/push/unsubscribe', requireMe, express.json({ limit: '2kb' }), (req, res) => {
+  if (req.body?.endpoint) removeSubscription(req.body.endpoint)
+  res.status(204).end()
+})
+
+app.use('/api/bottles', bottlesRouter)
+app.use('/api', (_req, res) => res.status(404).json({ error: 'not_found' }))
+
+const distDir = path.join(__dirname, '../dist')
+if (fs.existsSync(distDir)) {
+  app.use(express.static(distDir, { maxAge: isProduction ? '1h' : 0, setHeaders: (res, file) => {
+    if (file.endsWith('sw.js') || file.endsWith('index.html')) res.set('Cache-Control', 'no-cache')
+  } }))
+  app.get(/^(?!\/api|\/ws).*/, (_req, res) => res.sendFile(path.join(distDir, 'index.html')))
 }
 
-const port = Number(process.env.PORT) || 4000
-app.listen(port, () => {
-  console.log(`[server] FETCHLY API listening on port ${port} (${isProduction ? 'production' : 'development'})`)
+app.use((err, _req, res, next) => {
+  if (!err) return next()
+  if (err.type === 'entity.too.large') return res.status(413).json({ error: 'too_large' })
+  console.error(err)
+  res.status(400).json({ error: 'bad_request' })
 })
+
+const server = http.createServer(app)
+attachLive(server)
+
+const port = Number(process.env.PORT) || 4000
+server.listen(port, () => {
+  console.log(`[server] نبضنا listening on ${port} (${isProduction ? 'production' : 'development'})`)
+  if (!process.env.ROOM_PASSPHRASE) console.warn('[server] ROOM_PASSPHRASE not set — using the insecure development passphrase "dev".')
+})
+
+process.on('SIGTERM', () => { db.close(); process.exit(0) })
