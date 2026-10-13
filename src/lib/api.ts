@@ -21,5 +21,6 @@ export const api = {
   post: <T>(path: string, data?: unknown) => request<T>('POST', path, data === undefined ? null : JSON.stringify(data), json),
   put: <T>(path: string, data: unknown) => request<T>('PUT', path, JSON.stringify(data), json),
   del: <T>(path: string) => request<T>('DELETE', path),
-  postBlob: <T>(path: string, blob: Blob, contentType: string) => request<T>('POST', path, blob, { 'Content-Type': contentType }),
+  // Audio is sent as an opaque binary body; its real type travels in a header.
+  postBlob: <T>(path: string, blob: Blob, audioType: string) => request<T>('POST', path, blob, { 'Content-Type': 'application/octet-stream', 'X-Audio-Type': audioType }),
 }

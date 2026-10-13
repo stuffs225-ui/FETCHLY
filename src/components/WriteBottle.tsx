@@ -52,7 +52,7 @@ export function WriteBottle({ open, onClose, copy, onThrown }: { open: boolean; 
       const s = await navigator.mediaDevices.getUserMedia({ audio: true })
       stream.current = s
       const mimeType = pickMime()
-      const r = new MediaRecorder(s, mimeType ? { mimeType } : undefined)
+      const r = new MediaRecorder(s, { ...(mimeType ? { mimeType } : {}), audioBitsPerSecond: 32000 })
       const chunks: Blob[] = []
       r.ondataavailable = (e) => e.data.size && chunks.push(e.data)
       r.onstop = () => {

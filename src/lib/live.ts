@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { api } from './api'
 import type { DistanceInfo, PState, Together } from './types'
 
 export interface LiveState {
@@ -16,9 +17,22 @@ interface Handlers {
   onPartnerState: (next: PState, prev: PState) => void
 }
 
+interface SyncResponse {
+  serverTime: number
+  partner: { state: PState; lastSeen: number | null }
+  waiting: number
+  events: string[]
+  distance: DistanceInfo
+  together: Together
+}
+
+const FAST = 2500 // both here: feels live
+const SLOW = 6000 // alone: keeps the cost down but still notices arrivals quickly
+
 /**
- * One WebSocket for presence + events. Keeps a running estimate of the clock
- * offset to the server so both phones can beat to the exact same instant.
+ * Presence by lightweight polling (works on serverless hosting where there are no
+ * persistent sockets). Each poll also measures the clock offset to the server, so
+ * both phones can still beat on the exact same instant.
  */
 export function useLive(handlers: Handlers) {
   const [state, setState] = useState<LiveState>({
@@ -31,107 +45,72 @@ export function useLive(handlers: Handlers) {
   const hRef = useRef(handlers)
   hRef.current = handlers
   const offset = useRef(0)
-  const waitingRef = useRef(0)
-  const partnerRef = useRef<PState>('gone')
-  const wsRef = useRef<WebSocket | null>(null)
+  const waitingRef = useRef<number | null>(null)
+  const partnerRef = useRef<PState | null>(null)
+  const kick = useRef<() => void>(() => {})
 
   const serverNow = useCallback(() => Date.now() + offset.current, [])
 
   useEffect(() => {
-    let closed = false
-    let retry = 0
+    let stopped = false
     let timer: ReturnType<typeof setTimeout> | undefined
-    let syncTimer: ReturnType<typeof setInterval> | undefined
+    let busy = false
+    let nextDelay = SLOW
     const samples: { rtt: number; offset: number }[] = []
-    const sent = new Map<number, number>()
 
-    const setPartner = (next: PState, lastSeen: number | null, silent = false) => {
-      const prev = partnerRef.current
-      partnerRef.current = next
-      setState((s) => ({ ...s, partner: { state: next, lastSeen } }))
-      if (!silent && prev !== next) hRef.current.onPartnerState(next, prev)
-    }
-
-    const connect = () => {
-      const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`)
-      wsRef.current = ws
-
-      const sendSync = () => {
-        const id = Math.floor(performance.now())
-        sent.set(id, performance.now())
-        ws.send(JSON.stringify({ t: 'sync', id }))
-      }
-
-      ws.onopen = () => {
-        retry = 0
-        setState((s) => ({ ...s, connected: true }))
-        ws.send(JSON.stringify({ t: 'visible', value: document.visibilityState === 'visible' }))
-        sendSync()
-        syncTimer = setInterval(() => ws.readyState === 1 && sendSync(), 20_000)
-      }
-
-      ws.onmessage = (ev) => {
-        const m = JSON.parse(ev.data)
-        if (m.t === 'hello') {
-          setPartner(m.partner.state, m.partner.lastSeen, true)
-          waitingRef.current = m.waiting
-          setState((s) => ({ ...s, together: m.together, waiting: m.waiting, distance: m.distance }))
-        } else if (m.t === 'partner') {
-          setPartner(m.state, m.lastSeen)
-        } else if (m.t === 'sync') {
-          const t0 = sent.get(m.id)
-          if (t0 === undefined) return
-          sent.delete(m.id)
-          const rtt = performance.now() - t0
-          samples.push({ rtt, offset: m.serverTime + rtt / 2 - Date.now() })
-          if (samples.length > 6) samples.shift()
-          offset.current = samples.reduce((best, s) => (s.rtt < best.rtt ? s : best)).offset
-        } else if (m.t === 'together') {
-          setState((s) => ({ ...s, together: { total: m.total, today: m.today } }))
-        } else if (m.t === 'distance') {
-          setState((s) => ({ ...s, distance: { meters: m.meters, precise: m.precise, at: m.at, closestToday: m.closestToday } }))
-        } else if (m.t === 'ripple') {
-          hRef.current.onRipple()
-        } else if (m.t === 'opened') {
-          hRef.current.onOpened()
-        } else if (m.t === 'bottle') {
-          if (m.waiting > waitingRef.current) hRef.current.onNewBottle()
-          waitingRef.current = m.waiting
-          setState((s) => ({ ...s, waiting: m.waiting }))
-        }
-      }
-
-      ws.onclose = () => {
-        clearInterval(syncTimer)
-        setState((s) => ({ ...s, connected: false }))
-        if (closed) return
-        timer = setTimeout(connect, Math.min(1000 * 2 ** retry++, 10_000))
-      }
-    }
-
-    const onVisible = () => {
-      const ws = wsRef.current
-      if (ws?.readyState === 1) ws.send(JSON.stringify({ t: 'visible', value: document.visibilityState === 'visible' }))
-      else if (document.visibilityState === 'visible' && !closed && (!ws || ws.readyState === 3)) {
-        clearTimeout(timer)
-        connect()
-      }
-    }
-
-    connect()
-    document.addEventListener('visibilitychange', onVisible)
-    return () => {
-      closed = true
+    const run = async () => {
+      if (stopped || busy) return
       clearTimeout(timer)
-      clearInterval(syncTimer)
-      document.removeEventListener('visibilitychange', onVisible)
-      wsRef.current?.close()
+      busy = true
+      const visible = document.visibilityState === 'visible'
+      const t0 = performance.now()
+      const wall0 = Date.now()
+      try {
+        const r = await api.post<SyncResponse>('/sync', { visible })
+        const rtt = performance.now() - t0
+        samples.push({ rtt, offset: r.serverTime + rtt / 2 - (wall0 + rtt) })
+        if (samples.length > 6) samples.shift()
+        offset.current = samples.reduce((best, s) => (s.rtt < best.rtt ? s : best)).offset
+
+        const prevPartner = partnerRef.current
+        partnerRef.current = r.partner.state
+        if (waitingRef.current !== null && r.waiting > waitingRef.current) hRef.current.onNewBottle()
+        waitingRef.current = r.waiting
+        setState({ connected: true, partner: r.partner, together: r.together, waiting: r.waiting, distance: r.distance })
+
+        for (const e of r.events) {
+          if (e === 'ripple') hRef.current.onRipple()
+          else if (e === 'opened') hRef.current.onOpened()
+        }
+        if (prevPartner !== null && prevPartner !== r.partner.state) hRef.current.onPartnerState(r.partner.state, prevPartner)
+        nextDelay = r.partner.state === 'here' ? FAST : SLOW
+      } catch {
+        setState((s) => ({ ...s, connected: false }))
+        nextDelay = 4000
+      } finally {
+        busy = false
+        // A hidden page stops polling entirely; it resumes (and says so) when shown again.
+        if (!stopped && document.visibilityState === 'visible') timer = setTimeout(run, nextDelay)
+      }
+    }
+
+    const onVisibility = () => {
+      clearTimeout(timer)
+      void run() // tells the server immediately whether we are looking or not
+    }
+
+    kick.current = () => void run()
+    void run()
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      stopped = true
+      clearTimeout(timer)
+      document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [])
 
   const sendRipple = useCallback(() => {
-    const ws = wsRef.current
-    if (ws?.readyState === 1) ws.send(JSON.stringify({ t: 'ripple' }))
+    api.post('/ripple').catch(() => {})
   }, [])
 
   const setWaiting = useCallback((n: number) => {

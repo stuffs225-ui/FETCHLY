@@ -1,103 +1,100 @@
 import crypto from 'node:crypto'
-import { db, persistentSecret } from './db.js'
+import { q, persistentSecret } from './db.js'
+import { parseCookies, isSecure } from './http.js'
 
-export const isProduction = process.env.NODE_ENV === 'production'
-const secret = process.env.SESSION_SECRET || persistentSecret('cookieSecret')
 const COOKIE = 'nabd'
 // Browsers cap cookie lifetime at ~400 days, so this is effectively "until they clear the site data".
-const MAX_AGE = 1000 * 60 * 60 * 24 * 399
+const MAX_AGE_S = 60 * 60 * 24 * 399
 
 export const WHO = ['a', 'b']
 export const partnerOf = (who) => (who === 'a' ? 'b' : 'a')
 
-/** Each person has one private link. Slot A is "her", slot B is "him". Nothing is shown by name. */
-export const linkTokens = {
-  a: process.env.LINK_TOKEN_A || persistentSecret('linkTokenA', 18),
-  b: process.env.LINK_TOKEN_B || persistentSecret('linkTokenB', 18),
+let cfg = null
+/** Secrets are created once in the database; env vars can override them. */
+export async function config() {
+  if (cfg) return cfg
+  const [cookieSecret, a, b] = await Promise.all([persistentSecret('cookieSecret'), persistentSecret('linkTokenA', 18), persistentSecret('linkTokenB', 18)])
+  cfg = {
+    cookieSecret: process.env.SESSION_SECRET || cookieSecret,
+    tokens: { a: process.env.LINK_TOKEN_A || a, b: process.env.LINK_TOKEN_B || b },
+  }
+  return cfg
 }
 
 const sha = (v) => crypto.createHash('sha256').update(String(v)).digest()
 export const safeEqual = (a, b) => crypto.timingSafeEqual(sha(a), sha(b))
 
-export function whoForToken(token) {
+export async function whoForToken(token) {
   if (typeof token !== 'string' || token.length < 8) return null
+  const { tokens } = await config()
   // Compare against both so timing never reveals which one was close.
-  const a = safeEqual(token, linkTokens.a)
-  const b = safeEqual(token, linkTokens.b)
+  const a = safeEqual(token, tokens.a)
+  const b = safeEqual(token, tokens.b)
   return a ? 'a' : b ? 'b' : null
 }
 
 const hashPassword = (password, salt) => crypto.scryptSync(password, salt, 32).toString('hex')
 
-export function hasPassword(who) {
-  return Boolean(db.prepare('SELECT passHash FROM slots WHERE who = ?').get(who)?.passHash)
+export async function hasPassword(who) {
+  const r = await q('SELECT pass_hash FROM slots WHERE who = $1', [who])
+  return Boolean(r[0]?.pass_hash)
 }
 
-export function setPassword(who, password) {
+export async function anyPasswordSet() {
+  return (await q('SELECT 1 FROM slots WHERE pass_hash IS NOT NULL LIMIT 1')).length > 0
+}
+
+export async function setPassword(who, password) {
   const salt = crypto.randomBytes(16).toString('hex')
-  db.prepare(
-    'INSERT INTO slots (who, passHash, passSalt) VALUES (?, ?, ?) ON CONFLICT(who) DO UPDATE SET passHash = excluded.passHash, passSalt = excluded.passSalt'
-  ).run(who, hashPassword(password, salt), salt)
+  await q(
+    'INSERT INTO slots (who, pass_hash, pass_salt) VALUES ($1, $2, $3) ON CONFLICT (who) DO UPDATE SET pass_hash = EXCLUDED.pass_hash, pass_salt = EXCLUDED.pass_salt',
+    [who, hashPassword(password, salt), salt],
+  )
 }
 
-export function checkPassword(who, password) {
-  const row = db.prepare('SELECT passHash, passSalt FROM slots WHERE who = ?').get(who)
-  if (!row?.passHash) return false
-  return safeEqual(hashPassword(password, row.passSalt), row.passHash)
+export async function checkPassword(who, password) {
+  const r = (await q('SELECT pass_hash, pass_salt FROM slots WHERE who = $1', [who]))[0]
+  if (!r?.pass_hash) return false
+  return safeEqual(hashPassword(password, r.pass_salt), r.pass_hash)
 }
 
-export function anyPasswordSet() {
-  return db.prepare('SELECT 1 FROM slots WHERE passHash IS NOT NULL LIMIT 1').get() !== undefined
+export async function resetPassword(who) {
+  await q('DELETE FROM slots WHERE who = $1', [who])
 }
 
-export function resetPassword(who) {
-  db.prepare('DELETE FROM slots WHERE who = ?').run(who)
-}
+const sign = (secret, value) => crypto.createHmac('sha256', secret).update(value).digest('base64url')
 
-const sign = (value) => crypto.createHmac('sha256', secret).update(value).digest('base64url')
-
-export function issueCookie(req, res, who) {
+export async function issueCookie(req, res, who) {
+  const { cookieSecret } = await config()
   const value = `${who}.${Date.now()}`
-  res.cookie(COOKIE, `${value}.${sign(value)}`, { httpOnly: true, sameSite: 'lax', secure: req.secure, maxAge: MAX_AGE, path: '/' })
+  const parts = [`${COOKIE}=${value}.${sign(cookieSecret, value)}`, 'Path=/', 'HttpOnly', 'SameSite=Lax', `Max-Age=${MAX_AGE_S}`]
+  if (isSecure(req)) parts.push('Secure')
+  res.setHeader('Set-Cookie', parts.join('; '))
 }
 
-function parseCookies(header = '') {
-  const out = {}
-  for (const part of header.split(';')) {
-    const i = part.indexOf('=')
-    if (i > 0) out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim())
-  }
-  return out
-}
-
-/** Returns 'a' | 'b' for a valid signed cookie header, otherwise null. */
-export function whoFromCookieHeader(header) {
-  const raw = parseCookies(header)[COOKIE]
+/** Returns 'a' | 'b' for a valid signed cookie, otherwise null. */
+export async function whoFromRequest(req) {
+  const raw = parseCookies(req.headers.cookie)[COOKIE]
   if (!raw) return null
   const [who, ts, sig] = raw.split('.')
   if (!WHO.includes(who) || !ts || !sig) return null
-  const expected = sign(`${who}.${ts}`)
+  const { cookieSecret } = await config()
+  const expected = sign(cookieSecret, `${who}.${ts}`)
   if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null
-  if (Date.now() - Number(ts) > MAX_AGE) return null
+  if (Date.now() - Number(ts) > MAX_AGE_S * 1000) return null
   return who
 }
 
-export function requireMe(req, res, next) {
-  const who = whoFromCookieHeader(req.headers.cookie)
-  if (!who) return res.status(401).json({ error: 'unauthorized' })
-  req.who = who
-  next()
-}
-
-/** Blocks cross-site writes: the Origin (when sent) must match this host. */
-export function sameOrigin(req, res, next) {
-  const origin = req.headers.origin
-  if (origin && req.method !== 'GET' && req.method !== 'HEAD') {
-    try {
-      if (new URL(origin).host !== req.headers.host) return res.status(403).json({ error: 'bad_origin' })
-    } catch {
-      return res.status(403).json({ error: 'bad_origin' })
-    }
-  }
-  next()
+/** Shared across serverless instances because it lives in the database. */
+export async function tooManyAttempts(key, max, windowMs) {
+  const now = Date.now()
+  const r = await q(
+    `INSERT INTO attempts (key, count, since) VALUES ($1, 1, $2)
+     ON CONFLICT (key) DO UPDATE SET
+       count = CASE WHEN $2 - attempts.since > $3 THEN 1 ELSE attempts.count + 1 END,
+       since = CASE WHEN $2 - attempts.since > $3 THEN $2 ELSE attempts.since END
+     RETURNING count`,
+    [key, now, windowMs],
+  )
+  return r[0].count > max
 }
