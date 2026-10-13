@@ -7,7 +7,12 @@ import { api, ApiError } from '@/lib/api'
 import { makeCopy } from '@/lib/copy'
 import type { Profile, Who } from '@/lib/types'
 
-type Stage = { name: 'loading' } | { name: 'setup'; links: Record<Who, string> } | { name: 'nodb' } | { name: 'nolink' } | { name: 'invalid' } | { name: 'form'; who: Who; needsPassword: boolean }
+type Stage = { name: 'loading' } | { name: 'setup'; links: Record<Who, string> } | { name: 'nodb'; detail?: string; unreachable?: boolean } | { name: 'nolink' } | { name: 'invalid' } | { name: 'form'; who: Who; needsPassword: boolean }
+
+function dbStage(e: unknown): Stage | null {
+  if (!(e instanceof ApiError) || e.status !== 503) return null
+  return { name: 'nodb', unreachable: e.message === 'db_unavailable', detail: e.detail }
+}
 
 /**
  * The door. It opens only from a person's private link (?k=…). The first time
@@ -27,12 +32,12 @@ export function Join({ onEnter }: { onEnter: (p: Profile) => void }) {
       // No private link: if nobody has set up yet, show both links (first run only); otherwise a quiet "use your link" note.
       api.get<{ links: Record<Who, string> }>('/setup')
         .then((r) => setStage({ name: 'setup', links: r.links }))
-        .catch((e) => setStage(e instanceof ApiError && e.status === 503 ? { name: 'nodb' } : { name: 'nolink' }))
+        .catch((e) => setStage(dbStage(e) ?? { name: 'nolink' }))
       return
     }
     api.get<{ who: Who; needsPassword: boolean }>(`/join?k=${encodeURIComponent(token)}`)
       .then((r) => setStage({ name: 'form', who: r.who, needsPassword: r.needsPassword }))
-      .catch((e) => setStage(e instanceof ApiError && e.status === 503 ? { name: 'nodb' } : { name: 'invalid' }))
+      .catch((e) => setStage(dbStage(e) ?? { name: 'invalid' }))
   }, [token])
 
   const who: Who = stage.name === 'form' ? stage.who : 'a'
@@ -55,7 +60,7 @@ export function Join({ onEnter }: { onEnter: (p: Profile) => void }) {
     }
   }
 
-  const message = stage.name === 'nodb' ? ['قاعدة البيانات غير مربوطة بعد', 'في Vercel: Storage ← Create Database ← Neon ← Connect Project، ثم Redeploy'] : stage.name === 'nolink' ? [copy.join.needLink, copy.join.needLinkSub] : stage.name === 'invalid' ? [copy.join.invalid, copy.join.needLinkSub] : null
+  const message = stage.name === 'nodb' ? (stage.unreachable ? ['تعذّر الاتصال بقاعدة البيانات', stage.detail ?? ''] : ['قاعدة البيانات غير مربوطة بعد', 'اربط قاعدة Postgres (Supabase أو Neon) بالمشروع من Vercel ← Storage، ثم Redeploy']) : stage.name === 'nolink' ? [copy.join.needLink, copy.join.needLinkSub] : stage.name === 'invalid' ? [copy.join.invalid, copy.join.needLinkSub] : null
 
   return (
     <div className="flex h-full flex-col items-center justify-center px-8 safe-top safe-bottom">

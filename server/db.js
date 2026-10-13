@@ -12,6 +12,15 @@ export class NoDatabaseError extends Error {
   }
 }
 
+/** The database is configured but could not be reached / initialised. */
+export class DatabaseUnavailableError extends Error {
+  constructor(cause) {
+    super('db_unavailable')
+    this.code = 'db_unavailable'
+    this.detail = [cause?.code, String(cause?.message ?? '').slice(0, 100)].filter(Boolean).join(' · ')
+  }
+}
+
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS slots (who TEXT PRIMARY KEY, pass_hash TEXT, pass_salt TEXT)`,
@@ -26,11 +35,23 @@ const SCHEMA = [
 ]
 
 async function open() {
-  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_URL_NON_POOLING
-  if (url) {
-    const { neon } = await import('@neondatabase/serverless')
-    const sql = neon(url)
-    return { query: (text, params = []) => sql.query(text, params) }
+  // Any Postgres works (Supabase, Neon, Vercel Postgres…). Prefer the pooled URL on serverless.
+  const raw = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL || process.env.POSTGRES_URL_NON_POOLING
+  if (raw) {
+    const { default: pg } = await import('pg')
+    const url = new URL(raw)
+    const local = ['localhost', '127.0.0.1', '::1'].includes(url.hostname)
+    // Provider-specific query flags confuse the driver; TLS is configured explicitly instead.
+    for (const k of ['sslmode', 'supa', 'pgbouncer', 'connection_limit']) url.searchParams.delete(k)
+    const pool = new pg.Pool({
+      connectionString: url.toString(),
+      max: 1,
+      idleTimeoutMillis: 10_000,
+      connectionTimeoutMillis: 8_000,
+      ssl: local ? false : { rejectUnauthorized: false },
+    })
+    pool.on('error', () => {})
+    return { query: async (text, params = []) => (await pool.query(text, params)).rows }
   }
   // Local development only: an embedded Postgres, so the same SQL runs everywhere.
   if (process.env.VERCEL || process.env.NODE_ENV === 'production') throw new NoDatabaseError()
@@ -46,11 +67,15 @@ let ready = null
 function db() {
   ready ??= (async () => {
     const d = await open()
-    for (const stmt of SCHEMA) await d.query(stmt)
+    try {
+      for (const stmt of SCHEMA) await d.query(stmt)
+    } catch (err) {
+      throw new DatabaseUnavailableError(err)
+    }
     return d
   })().catch((err) => {
     ready = null
-    throw err
+    throw err instanceof NoDatabaseError || err instanceof DatabaseUnavailableError ? err : new DatabaseUnavailableError(err)
   })
   return ready
 }
