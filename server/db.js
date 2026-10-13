@@ -19,7 +19,7 @@ export class DatabaseUnavailableError extends Error {
   constructor(cause) {
     super('db_unavailable')
     this.code = 'db_unavailable'
-    this.detail = [cause?.code, String(cause?.message ?? '').slice(0, 100)].filter(Boolean).join(' · ')
+    this.detail = [cause?.code, String(cause?.message ?? '').slice(0, 160)].filter(Boolean).join(' · ')
   }
 }
 
@@ -95,6 +95,17 @@ function inline(text, params) {
   })
 }
 
+/** Which Postgres role an API key maps to (read from the key itself; the signature is not checked here). */
+function keyRole(key) {
+  if (key.startsWith('sb_secret_')) return 'service_role'
+  if (key.startsWith('sb_publishable_')) return 'anon'
+  try {
+    return JSON.parse(Buffer.from(key.split('.')[1], 'base64url').toString()).role ?? 'unknown'
+  } catch {
+    return 'unknown'
+  }
+}
+
 function supabaseRest(url, key) {
   const base = url.replace(/\/$/, '')
   const ref = new URL(base).hostname.split('.')[0]
@@ -110,7 +121,8 @@ function supabaseRest(url, key) {
       try { e = JSON.parse(raw) } catch { /* not json */ }
       if (res.status === 404 || e.code === 'PGRST202') throw new SchemaMissingError(ref)
       if (/nb_[a-z]+/.test(e.message ?? '') && /does not exist/.test(e.message ?? '')) throw new SchemaMissingError(ref)
-      const err = new Error(e.message || `HTTP ${res.status}`)
+      const hint = e.code === '42501' || res.status === 401 || res.status === 403 ? ` · key role: ${keyRole(key)}` : ''
+      const err = new Error((e.message || `HTTP ${res.status}`) + hint)
       err.code = e.code || String(res.status)
       throw err
     }

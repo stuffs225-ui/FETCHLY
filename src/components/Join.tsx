@@ -81,6 +81,12 @@ export function Join({ onEnter }: { onEnter: (p: Profile) => void }) {
         </motion.div>
       )}
 
+      {stage.name === 'nodb' && stage.unreachable && /key role: (anon|authenticated)/.test(stage.detail ?? '') && (
+        <p className="mt-4 max-w-xs text-center text-sm leading-7 text-accent-soft">
+          المفتاح المخزّن في Vercel باسم SUPABASE_SERVICE_ROLE_KEY هو مفتاح عام (anon) وليس مفتاح service_role السرّي.
+        </p>
+      )}
+
       {stage.name === 'schema' && <SchemaSetup sql={stage.sql} dashboard={stage.dashboard} />}
 
       {stage.name === 'nodb' && !stage.unreachable && (
