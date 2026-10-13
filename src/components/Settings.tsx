@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { MapPin, MapPinOff, Smartphone, Volume2, Check } from 'lucide-react'
 import { Sheet } from './Sheet'
 import { api } from '@/lib/api'
-import { GENDERS } from '@/lib/types'
+import { HeartShape } from './Heart'
 import type { Who } from '@/lib/types'
 import { THEMES } from '@/lib/theme'
 import type { ThemeKey } from '@/lib/theme'
@@ -40,7 +40,6 @@ export function Settings({ open, onClose, haptics, setHaptics, sound, setSound, 
   const locOn = loc.status === 'on'
   const [confirmReset, setConfirmReset] = useState(false)
   const [done, setDone] = useState(false)
-  const her = GENDERS[partner] === 'f'
   const resetPartner = async () => {
     await api.post('/reset-partner').catch(() => {})
     setConfirmReset(false)
@@ -70,27 +69,30 @@ export function Settings({ open, onClose, haptics, setHaptics, sound, setSound, 
           <Toggle
             on={locOn}
             onChange={(v) => (v ? loc.enable() : loc.disable())}
-            label="مشاركة موقعي لنعرف المسافة بيننا"
-            hint={loc.status === 'denied' ? 'الموقع مغلق من إعدادات المتصفح' : 'لا يرى الطرف الثاني إلا المسافة'}
+            label="مشاركة موقعي"
+            hint={loc.status === 'denied' ? 'مغلق من إعدادات المتصفح' : undefined}
             icon={locOn ? <MapPin className="h-5 w-5" /> : <MapPinOff className="h-5 w-5" />}
           />
         )}
-        <Toggle on={haptics} onChange={setHaptics} label="اهتزاز مع كل نبضة عندما تكونان معًا" icon={<Smartphone className="h-5 w-5" />} />
-        <Toggle on={sound} onChange={(v) => { if (v) void import('@/lib/sound').then((m) => m.unlockSound()); setSound(v) }} label="صوت نبض القلب" hint="هادئ ومنخفض" icon={<Volume2 className="h-5 w-5" />} />
+        <Toggle on={haptics} onChange={setHaptics} label="اهتزاز النبض" icon={<Smartphone className="h-5 w-5" />} />
+        <Toggle on={sound} onChange={(v) => { if (v) void import('@/lib/sound').then((m) => m.unlockSound()); setSound(v) }} label="صوت النبض" icon={<Volume2 className="h-5 w-5" />} />
 
         <div className="rounded-2xl border border-glass-line bg-glass p-4">
-          <p className="text-[15px] font-medium text-ink">{her ? 'نسيَت رمزها؟' : 'نسي رمزه؟'}</p>
-          <p className="mt-1 text-xs leading-6 text-mist">{her ? 'امسح رمزها لتختار رمزًا جديدًا عند دخولها القادم.' : 'امسح رمزه ليختار رمزًا جديدًا عند دخوله القادم.'}</p>
-          {done ? (
-            <p className="mt-3 text-sm text-accent-soft">تم. {her ? 'ستختار رمزًا جديدًا عند دخولها' : 'سيختار رمزًا جديدًا عند دخوله'}.</p>
-          ) : confirmReset ? (
-            <div className="mt-3 flex gap-2">
-              <button onClick={resetPartner} className="flex-1 rounded-xl bg-accent py-2.5 text-sm font-bold text-on-accent active:scale-95">نعم، امسحه</button>
-              <button onClick={() => setConfirmReset(false)} className="flex-1 rounded-xl border border-glass-line py-2.5 text-sm text-ink active:scale-95">إلغاء</button>
-            </div>
-          ) : (
-            <button onClick={() => setConfirmReset(true)} className="mt-3 rounded-xl border border-glass-line px-4 py-2.5 text-sm text-ink active:scale-95">{her ? 'مسح رمزها' : 'مسح رمزه'}</button>
-          )}
+          <div className="flex items-center justify-between gap-3">
+            <span className="flex items-center gap-2.5 text-[15px] font-medium text-ink">
+              مسح الرمز <HeartShape tone={partner} className="h-5 w-[22px]" />
+            </span>
+            {done ? (
+              <span className="text-sm text-accent-soft">تم</span>
+            ) : confirmReset ? (
+              <span className="flex gap-2">
+                <button onClick={resetPartner} className="rounded-xl bg-accent px-4 py-2 text-sm font-bold text-on-accent active:scale-95">تأكيد</button>
+                <button onClick={() => setConfirmReset(false)} className="rounded-xl border border-glass-line px-4 py-2 text-sm text-ink active:scale-95">إلغاء</button>
+              </span>
+            ) : (
+              <button onClick={() => setConfirmReset(true)} className="rounded-xl border border-glass-line px-4 py-2 text-sm text-ink active:scale-95">مسح</button>
+            )}
+          </div>
         </div>
       </div>
     </Sheet>

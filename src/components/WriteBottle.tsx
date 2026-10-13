@@ -118,14 +118,14 @@ export function WriteBottle({ open, onClose, copy, onThrown }: { open: boolean; 
       <div className="mt-3">
         {rec === 'idle' && (
           <button onClick={start} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-glass-line py-3.5 text-sm text-mist transition-colors hover:border-rose/50 hover:text-ink">
-            <Mic className="h-4.5 w-4.5" /> سجّل صوتك (حتى {MAX_SECONDS} ثانية)
+            <Mic className="h-4.5 w-4.5" /> تسجيل صوتي
           </button>
         )}
         {rec === 'recording' && (
           <button onClick={stop} className="flex w-full items-center justify-center gap-3 rounded-2xl border border-accent/60 bg-accent/10 py-3.5 text-sm text-ink">
             <span className="relative flex h-3 w-3"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose opacity-75" /><span className="relative inline-flex h-3 w-3 rounded-full bg-rose" /></span>
             <span className="tabular-nums">{clock(seconds)}</span>
-            <Square className="h-4 w-4" fill="currentColor" /> إيقاف
+            <Square className="h-4 w-4" fill="currentColor" />
           </button>
         )}
         {rec === 'done' && url && (

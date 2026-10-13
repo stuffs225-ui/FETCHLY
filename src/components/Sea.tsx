@@ -83,15 +83,13 @@ export function Sea({ waiting, copy, onWaiting, active }: { waiting: number; cop
           {waiting > 0 ? (
             <>
               <p className="text-2xl font-bold text-ink">{copy.sea.waiting(waiting === 1 ? 'زجاجة' : waiting === 2 ? 'زجاجتان' : `${num(waiting)} ${waiting <= 10 ? 'زجاجات' : 'زجاجة'}`)}</p>
-              {shake.supported && !shake.needsPermission && <p className="mt-2 text-sm text-mist">{copy.sea.shakeHint}</p>}
               {shake.needsPermission && (
-                <button onClick={shake.askPermission} className="mt-2 text-sm text-rose-soft underline underline-offset-4">فعّل الهزّ على جوالك</button>
+                <button onClick={shake.askPermission} className="mt-2 text-sm text-accent-soft underline underline-offset-4">تفعيل الهزّ</button>
               )}
             </>
           ) : (
             <>
               <p className="text-2xl font-bold text-ink">{copy.sea.calm}</p>
-              <p className="mt-2 text-sm text-mist">{copy.sea.calmSub}</p>
             </>
           )}
         </div>

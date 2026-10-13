@@ -2,27 +2,24 @@ import { GENDERS } from './types'
 import type { Profile } from './types'
 
 /**
- * All Arabic wording. Nobody is called by name — the other person is simply
- * "هي" or "هو", and every verb agrees with the right gender.
+ * Arabic wording, kept short. Nobody is named and no pronoun is used as a
+ * subject — verbs simply agree with the other person's gender.
  */
 export function makeCopy(p: Profile) {
   const mf = GENDERS[p.who]
   const of = GENDERS[p.partner]
   const you = (m: string, f: string) => (mf === 'm' ? m : f)
   const they = (m: string, f: string) => (of === 'm' ? m : f)
-  const other = they('هو', 'هي')
-  const his = they('ه', 'ها')
 
   return {
-    other,
     status: {
       together: 'أنتما هنا الآن… معًا',
-      togetherSub: 'قلباكما ينبضان بإيقاع واحد',
-      alone: `${other} ليس${they('', 'ت')} هنا الآن`,
-      aloneSub: (when: string) => (when ? `آخر مرة كان${they('', 'ت')} هنا ${when}` : `لم ${they('يدخل', 'تدخل')} بعد`),
-      away: `${other} بعيد${they('', 'ة')} عن الشاشة قليلًا`,
-      awaySub: `قلب${his} ما زال معك`,
-      connecting: 'نتصل بقلبك…',
+      togetherSub: '',
+      alone: `ليس${they('', 'ت')} هنا الآن`,
+      aloneSub: (when: string) => (when ? `آخر مرة ${when}` : `لم ${they('يدخل', 'تدخل')} بعد`),
+      away: `بعيد${they('', 'ة')} عن الشاشة قليلًا`,
+      awaySub: '',
+      connecting: '…',
     },
     distance: {
       title: (d: string) => `${d} بينكما`,
@@ -32,55 +29,52 @@ export function makeCopy(p: Profile) {
       area: 'في نفس المنطقة تقريبًا',
       far: 'بينكما مسافة… لكن النبض واحد',
       closest: (d: string) => `أقرب ما كنتما اليوم: ${d}`,
-      askTitle: 'هل نعرف كم تبعدان عن بعض؟',
-      askBody: `نحتاج موقعك مرة واحدة. لا يرى ${other} إلا المسافة، ولا يُحفظ أي سجل لتنقلاتك.`,
-      askYes: 'نعم، شارك موقعي',
-      askNo: 'ليس الآن',
-      denied: 'الموقع مغلق على هذا الجوال. فعّله من إعدادات المتصفح ثم أعد فتح الصفحة',
-      unsupported: 'هذا المتصفح لا يدعم تحديد الموقع',
-      waitingOther: `بانتظار أن ${they('يشارك', 'تشارك')} ${other} موقع${his}`,
+      askTitle: 'مشاركة الموقع لمعرفة المسافة',
+      askBody: '',
+      askYes: 'مشاركة',
+      askNo: 'لاحقًا',
+      denied: 'الموقع مغلق من إعدادات المتصفح',
+      unsupported: '',
+      waitingOther: `بانتظار ${they('أن يشارك', 'أن تشارك')} موقع${they('ه', 'ها')}`,
     },
     toast: {
-      partnerHere: `${other} ${they('دخل', 'دخلت')}… قلب${his} بدأ ينبض`,
-      partnerLeft: `${other} ${they('غادر', 'غادرت')}… وقلب${his} ما زال معك`,
-      touched: `${other} ${they('لمس', 'لمست')} قلبك`,
-      newBottle: `${other} ${they('رمى', 'رمت')} لك زجاجة جديدة`,
-      opened: `${other} ${they('فتح', 'فتحت')} زجاجتك`,
-      thrown: `رميتها في البحر… وستجدها ${other} عندما يشاء القدر`,
-      thrownVoice: `رميت صوتك في البحر… وسيصل ${other} يومًا ما`,
-      micDenied: 'لم نستطع الوصول إلى المايك. اسمح به من إعدادات المتصفح',
+      partnerHere: `${they('دخل', 'دخلت')}… ${they('قلبه', 'قلبها')} ينبض`,
+      partnerLeft: `${they('غادر', 'غادرت')}`,
+      touched: `${they('لمس', 'لمست')} قلبك`,
+      newBottle: `${they('رمى', 'رمت')} لك زجاجة`,
+      opened: `${they('فتح', 'فتحت')} زجاجتك`,
+      thrown: 'رميتها في البحر',
+      thrownVoice: 'رميت صوتك في البحر',
+      micDenied: 'المايك مغلق من إعدادات المتصفح',
       error: 'حدث خطأ، جرّب مرة ثانية',
     },
-    touchHint: `المس قلب${his} ليخفق أسرع`,
+    touchHint: '',
     sea: {
       calm: 'البحر هادئ الآن',
-      calmSub: `لا توجد زجاجات جديدة من ${other}`,
-      waiting: (n: string) => `تنتظرك ${n} من ${other}`,
-      shakeHint: 'هزّ جوالك… أو المس الزجاجة',
+      calmSub: '',
+      waiting: (n: string) => `تنتظرك ${n}`,
+      shakeHint: '',
       open: 'افتح زجاجة',
       write: 'اكتب زجاجة',
-      empty: `لم ${they('يرمِ', 'ترمِ')} ${other} أي زجاجة بعد`,
-      fresh: 'زجاجة جديدة',
-      old: 'ذكرى عادت إليك',
-      reply: 'ردّ بزجاجة',
-      writeTitle: 'ماذا تريد أن تقول؟',
-      placeholder: you('اكتب ما في قلبك…', 'اكتبي ما في قلبك…'),
-      throwIt: 'ارمِها في البحر',
+      empty: 'لا توجد زجاجات بعد',
+      fresh: 'جديدة',
+      old: 'قديمة',
+      reply: 'ردّ',
+      writeTitle: 'زجاجة',
+      placeholder: you('اكتب…', 'اكتبي…'),
+      throwIt: 'ارمِها',
       mine: 'ما رميته',
       kept: 'ما حفظته',
       notFound: 'لم تُفتح بعد',
-      noneMine: 'لم ترمِ أي زجاجة بعد',
-      noneKept: 'لم تفتح أي زجاجة بعد',
+      noneMine: 'لا شيء بعد',
+      noneKept: 'لا شيء بعد',
     },
     join: {
-      chooseTitle: you('اختر رمزك', 'اختاري رمزك'),
-      chooseSub: you('مرة واحدة فقط. سيُحفظ على هذا الجوال، وتحتاجه لو غيّرت جوالك.', 'مرة واحدة فقط. سيُحفظ على هذا الجوال، وتحتاجينه لو غيّرتِ جوالك.'),
-      enterTitle: 'أهلًا بعودتك',
-      enterSub: 'اكتب رمزك',
+      chooseHint: you('اختر رمزًا', 'اختاري رمزًا'),
       placeholder: 'الرمز',
       go: 'ادخل',
-      short: 'الرمز قصير (٤ أحرف على الأقل)',
-      wrong: 'ليس هذا الرمز… جرّب مرة ثانية',
+      short: '٤ أحرف على الأقل',
+      wrong: 'ليس هذا الرمز',
       tooMany: 'محاولات كثيرة، انتظر قليلًا',
     },
   }

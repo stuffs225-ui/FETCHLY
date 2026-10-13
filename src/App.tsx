@@ -50,7 +50,6 @@ function Home({ profile, onTogether }: { profile: Profile; onTogether: (v: boole
   const [rippleTick, setRippleTick] = useState(0)
   const [haptics, setHaptics] = usePref('nabd_haptics', false)
   const [sound, setSound] = usePref('nabd_sound', false)
-  const [touched, setTouched] = usePref('nabd_touched', false)
   const [theme, setTheme] = useTheme()
   const loc = useLocationShare()
   const [, setNow] = useState(0)
@@ -120,13 +119,13 @@ function Home({ profile, onTogether }: { profile: Profile; onTogether: (v: boole
                 haptics={haptics}
                 sound={sound}
                 distance={state.distance}
-                onTouchPartner={() => { sendRipple(); setTouched(true) }}
+                onTouchPartner={sendRipple}
               />
               <div className="-mt-3 min-h-[132px] px-8 text-center">
                 <AnimatePresence mode="wait">
                   <motion.div key={status.title} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.45 }}>
                     <h1 className="text-2xl font-bold leading-tight text-ink">{status.title}</h1>
-                    <p className="mt-1.5 text-sm text-mist">{status.sub}</p>
+                    {status.sub && <p className="mt-1.5 text-sm text-mist">{status.sub}</p>}
                   </motion.div>
                 </AnimatePresence>
 
@@ -140,13 +139,11 @@ function Home({ profile, onTogether }: { profile: Profile; onTogether: (v: boole
                 {state.distance.closestToday !== null && dLine && state.distance.meters !== null && state.distance.meters > state.distance.closestToday + 50 && <p className="mt-1.5 text-xs text-mist/80">{copy.distance.closest(dist(state.distance.closestToday))}</p>}
 
                 {state.together.total >= 60 && <p className="mt-3 text-xs text-mist/70">معًا اليوم {spent(state.together.today)}</p>}
-                {!touched && state.partner.state !== 'gone' && <p className="mt-2 text-xs text-accent-soft/90">{copy.touchHint}</p>}
-              </div>
+                              </div>
 
               {loc.status === 'ask' && (
                 <div className="glass mx-6 mb-4 rounded-2xl p-4 text-center">
                   <p className="text-[15px] font-medium text-ink">{copy.distance.askTitle}</p>
-                  <p className="mt-1 text-xs leading-6 text-mist">{copy.distance.askBody}</p>
                   <div className="mt-3 flex justify-center gap-2">
                     <button onClick={loc.enable} className="rounded-xl bg-accent px-5 py-2 text-sm font-bold text-on-accent active:scale-95">{copy.distance.askYes}</button>
                     <button onClick={loc.dismiss} className="rounded-xl px-4 py-2 text-sm text-mist active:scale-95">{copy.distance.askNo}</button>

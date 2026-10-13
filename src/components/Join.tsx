@@ -69,11 +69,13 @@ export function Join({ onEnter }: { onEnter: (p: Profile) => void }) {
 
   return (
     <div className="flex h-full flex-col items-center justify-center px-8 safe-top safe-bottom">
-      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}>
-        <motion.div animate={{ scale: [1, 1.06, 1, 1.03, 1] }} transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut', times: [0, 0.12, 0.3, 0.42, 1] }}>
-          <HeartShape tone={who ?? 'a'} className="h-[80px] w-[89px]" />
+      {(who !== null || fatal || !slots) && (
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}>
+          <motion.div animate={{ scale: [1, 1.06, 1, 1.03, 1] }} transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut', times: [0, 0.12, 0.3, 0.42, 1] }}>
+            <HeartShape tone={who ?? 'a'} className="h-[80px] w-[89px]" />
+          </motion.div>
         </motion.div>
-      </motion.div>
+      )}
 
       <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.9 }} className="mt-9 text-3xl font-bold text-ink">نبضنا</motion.h1>
 
@@ -97,28 +99,28 @@ export function Join({ onEnter }: { onEnter: (p: Profile) => void }) {
       {!fatal && slots && (
         <AnimatePresence mode="wait">
           {who === null ? (
-            <motion.div key="pick" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ delay: 0.3, duration: 0.8 }} className="mt-8 w-full max-w-xs">
-              <p className="text-center text-lg text-ink">من أنت؟</p>
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                {([['a', 'أنا هي'], ['b', 'أنا هو']] as const).map(([k, label]) => (
-                  <button key={k} onClick={() => choose(k)} className="glass flex flex-col items-center gap-3 rounded-2xl py-6 text-ink transition-transform active:scale-95">
-                    <HeartShape tone={k} className="h-9 w-10" />
-                    <span className="text-base font-medium">{label}</span>
-                  </button>
-                ))}
-              </div>
+            <motion.div key="pick" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ delay: 0.3, duration: 0.8 }} className="mt-10 flex items-center justify-center gap-10">
+              {(['a', 'b'] as const).map((k) => (
+                <motion.button
+                  key={k}
+                  onClick={() => choose(k)}
+                  aria-label={k === 'a' ? 'أنا هي' : 'أنا هو'}
+                  whileTap={{ scale: 0.88 }}
+                  whileHover={{ scale: 1.06 }}
+                  className="p-3 outline-none"
+                >
+                  <HeartShape tone={k} className="h-[68px] w-[76px] drop-shadow-[0_8px_18px_rgba(0,0,0,.25)]" />
+                </motion.button>
+              ))}
             </motion.div>
           ) : (
-            <motion.form key="code" onSubmit={submit} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }} className="mt-8 w-full max-w-xs">
-              <p className="text-center text-lg text-ink">{needsCode ? copy.join.chooseTitle : copy.join.enterTitle}</p>
-              <p className="mt-1.5 text-center text-sm text-mist">{needsCode ? copy.join.chooseSub : copy.join.enterSub}</p>
-
-              <motion.div key={shake} animate={shake ? { x: [0, -7, 7, -5, 5, 0] } : {}} transition={{ duration: 0.4 }} className="relative mt-5">
+            <motion.form key="code" onSubmit={submit} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }} className="mt-9 w-full max-w-xs">
+              <motion.div key={shake} animate={shake ? { x: [0, -7, 7, -5, 5, 0] } : {}} transition={{ duration: 0.4 }} className="relative">
                 <input
                   type={show ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder={copy.join.placeholder}
+                  placeholder={needsCode ? copy.join.chooseHint : copy.join.placeholder}
                   autoComplete={needsCode ? 'new-password' : 'current-password'}
                   autoFocus
                   className="glass w-full rounded-2xl px-5 py-3.5 pe-12 text-center text-ink outline-none transition-colors placeholder:text-mist/60 focus:border-accent/50"
@@ -132,8 +134,8 @@ export function Join({ onEnter }: { onEnter: (p: Profile) => void }) {
               <button type="submit" disabled={!password || busy} className="mt-2 w-full rounded-2xl bg-accent py-3.5 text-base font-bold text-on-accent transition-all active:scale-[0.98] disabled:opacity-40">
                 {copy.join.go}
               </button>
-              <button type="button" onClick={() => { setWho(null); setPassword(''); setError('') }} className="mx-auto mt-3 flex items-center gap-1.5 px-3 py-2 text-sm text-mist">
-                <ArrowRight className="h-4 w-4" /> لست أنا
+              <button type="button" onClick={() => { setWho(null); setPassword(''); setError('') }} aria-label="رجوع" className="mx-auto mt-3 flex p-2 text-mist">
+                <ArrowRight className="h-5 w-5" />
               </button>
             </motion.form>
           )}
