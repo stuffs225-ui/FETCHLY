@@ -3,14 +3,16 @@ import { motion } from 'framer-motion'
 import { Eye, EyeOff } from 'lucide-react'
 import { HeartShape } from './Heart'
 import { LinkCard } from './LinkCard'
+import { SchemaSetup } from './SchemaSetup'
 import { api, ApiError } from '@/lib/api'
 import { makeCopy } from '@/lib/copy'
 import type { Profile, Who } from '@/lib/types'
 
-type Stage = { name: 'loading' } | { name: 'setup'; links: Record<Who, string> } | { name: 'nodb'; detail?: string; unreachable?: boolean; seen?: string[] } | { name: 'nolink' } | { name: 'invalid' } | { name: 'form'; who: Who; needsPassword: boolean }
+type Stage = { name: 'loading' } | { name: 'setup'; links: Record<Who, string> } | { name: 'nodb'; detail?: string; unreachable?: boolean; seen?: string[] } | { name: 'schema'; sql: string; dashboard: string } | { name: 'nolink' } | { name: 'invalid' } | { name: 'form'; who: Who; needsPassword: boolean }
 
 function dbStage(e: unknown): Stage | null {
   if (!(e instanceof ApiError) || e.status !== 503) return null
+  if (e.message === 'schema_missing' && e.extra?.sql) return { name: 'schema', sql: e.extra.sql, dashboard: e.extra.dashboard ?? 'https://supabase.com/dashboard' }
   return { name: 'nodb', unreachable: e.message === 'db_unavailable', detail: e.detail, seen: e.seen }
 }
 
@@ -78,6 +80,8 @@ export function Join({ onEnter }: { onEnter: (p: Profile) => void }) {
           <p className="mt-1.5 text-sm text-mist">{message[1]}</p>
         </motion.div>
       )}
+
+      {stage.name === 'schema' && <SchemaSetup sql={stage.sql} dashboard={stage.dashboard} />}
 
       {stage.name === 'nodb' && !stage.unreachable && (
         <p dir="ltr" className="mt-5 max-w-xs text-center text-[11px] leading-5 text-mist/70">

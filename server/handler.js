@@ -1,5 +1,5 @@
 import crypto from 'node:crypto'
-import { q, getSetting, setSetting, dayKey, addTogether, togetherStats, NoDatabaseError, DatabaseUnavailableError } from './db.js'
+import { q, getSetting, setSetting, dayKey, addTogether, togetherStats, NoDatabaseError, DatabaseUnavailableError, SchemaMissingError, SETUP_SQL } from './db.js'
 import {
   config, whoForToken, hasPassword, anyPasswordSet, setPassword, checkPassword, issueCookie, whoFromRequest, partnerOf, tooManyAttempts,
 } from './auth.js'
@@ -299,6 +299,7 @@ export async function handle(req, res) {
 
     send(res, 404, { error: 'not_found' })
   } catch (err) {
+    if (err instanceof SchemaMissingError) return send(res, 503, { error: 'schema_missing', sql: SETUP_SQL, dashboard: err.dashboard })
     if (err instanceof NoDatabaseError) return send(res, 503, { error: 'no_database', seen: err.seen })
     if (err instanceof DatabaseUnavailableError) { console.error('[db]', err.detail); return send(res, 503, { error: 'db_unavailable', detail: err.detail }) }
     if (err?.status === 413) return send(res, 413, { error: 'too_large' })
