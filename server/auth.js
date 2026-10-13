@@ -36,30 +36,30 @@ export async function whoForToken(token) {
 const hashPassword = (password, salt) => crypto.scryptSync(password, salt, 32).toString('hex')
 
 export async function hasPassword(who) {
-  const r = await q('SELECT pass_hash FROM slots WHERE who = $1', [who])
+  const r = await q('SELECT pass_hash FROM nb_slots WHERE who = $1', [who])
   return Boolean(r[0]?.pass_hash)
 }
 
 export async function anyPasswordSet() {
-  return (await q('SELECT 1 FROM slots WHERE pass_hash IS NOT NULL LIMIT 1')).length > 0
+  return (await q('SELECT 1 FROM nb_slots WHERE pass_hash IS NOT NULL LIMIT 1')).length > 0
 }
 
 export async function setPassword(who, password) {
   const salt = crypto.randomBytes(16).toString('hex')
   await q(
-    'INSERT INTO slots (who, pass_hash, pass_salt) VALUES ($1, $2, $3) ON CONFLICT (who) DO UPDATE SET pass_hash = EXCLUDED.pass_hash, pass_salt = EXCLUDED.pass_salt',
+    'INSERT INTO nb_slots (who, pass_hash, pass_salt) VALUES ($1, $2, $3) ON CONFLICT (who) DO UPDATE SET pass_hash = EXCLUDED.pass_hash, pass_salt = EXCLUDED.pass_salt',
     [who, hashPassword(password, salt), salt],
   )
 }
 
 export async function checkPassword(who, password) {
-  const r = (await q('SELECT pass_hash, pass_salt FROM slots WHERE who = $1', [who]))[0]
+  const r = (await q('SELECT pass_hash, pass_salt FROM nb_slots WHERE who = $1', [who]))[0]
   if (!r?.pass_hash) return false
   return safeEqual(hashPassword(password, r.pass_salt), r.pass_hash)
 }
 
 export async function resetPassword(who) {
-  await q('DELETE FROM slots WHERE who = $1', [who])
+  await q('DELETE FROM nb_slots WHERE who = $1', [who])
 }
 
 const sign = (secret, value) => crypto.createHmac('sha256', secret).update(value).digest('base64url')
@@ -89,10 +89,10 @@ export async function whoFromRequest(req) {
 export async function tooManyAttempts(key, max, windowMs) {
   const now = Date.now()
   const r = await q(
-    `INSERT INTO attempts (key, count, since) VALUES ($1, 1, $2)
+    `INSERT INTO nb_attempts (key, count, since) VALUES ($1, 1, $2)
      ON CONFLICT (key) DO UPDATE SET
-       count = CASE WHEN $2 - attempts.since > $3 THEN 1 ELSE attempts.count + 1 END,
-       since = CASE WHEN $2 - attempts.since > $3 THEN $2 ELSE attempts.since END
+       count = CASE WHEN $2 - nb_attempts.since > $3 THEN 1 ELSE nb_attempts.count + 1 END,
+       since = CASE WHEN $2 - nb_attempts.since > $3 THEN $2 ELSE nb_attempts.since END
      RETURNING count`,
     [key, now, windowMs],
   )

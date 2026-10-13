@@ -9,6 +9,8 @@ export class NoDatabaseError extends Error {
   constructor() {
     super('no_database')
     this.code = 'no_database'
+    // Names only (never values): lets the door screen say what the host *does* provide.
+    this.seen = Object.keys(process.env).filter((k) => /supabase|postgres|database|neon|^pg/i.test(k)).sort()
   }
 }
 
@@ -22,21 +24,25 @@ export class DatabaseUnavailableError extends Error {
 }
 
 const SCHEMA = [
-  `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)`,
-  `CREATE TABLE IF NOT EXISTS slots (who TEXT PRIMARY KEY, pass_hash TEXT, pass_salt TEXT)`,
-  `CREATE TABLE IF NOT EXISTS presence (who TEXT PRIMARY KEY, beat DOUBLE PRECISION NOT NULL, visible BOOLEAN NOT NULL, seen DOUBLE PRECISION NOT NULL)`,
-  `CREATE TABLE IF NOT EXISTS locations (who TEXT PRIMARY KEY, lat DOUBLE PRECISION NOT NULL, lng DOUBLE PRECISION NOT NULL, accuracy DOUBLE PRECISION NOT NULL, updated DOUBLE PRECISION NOT NULL)`,
-  `CREATE TABLE IF NOT EXISTS together (day TEXT PRIMARY KEY, seconds DOUBLE PRECISION NOT NULL DEFAULT 0)`,
-  `CREATE TABLE IF NOT EXISTS bottles (
+  `CREATE TABLE IF NOT EXISTS nb_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS nb_slots (who TEXT PRIMARY KEY, pass_hash TEXT, pass_salt TEXT)`,
+  `CREATE TABLE IF NOT EXISTS nb_presence (who TEXT PRIMARY KEY, beat DOUBLE PRECISION NOT NULL, visible BOOLEAN NOT NULL, seen DOUBLE PRECISION NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS nb_locations (who TEXT PRIMARY KEY, lat DOUBLE PRECISION NOT NULL, lng DOUBLE PRECISION NOT NULL, accuracy DOUBLE PRECISION NOT NULL, updated DOUBLE PRECISION NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS nb_together (day TEXT PRIMARY KEY, seconds DOUBLE PRECISION NOT NULL DEFAULT 0)`,
+  `CREATE TABLE IF NOT EXISTS nb_bottles (
      id SERIAL PRIMARY KEY, author TEXT NOT NULL, kind TEXT NOT NULL, body TEXT, audio_mime TEXT, audio_b64 TEXT,
      created_at DOUBLE PRECISION NOT NULL, opened_at DOUBLE PRECISION, opened_count INTEGER NOT NULL DEFAULT 0)`,
-  `CREATE TABLE IF NOT EXISTS events (id SERIAL PRIMARY KEY, to_who TEXT NOT NULL, kind TEXT NOT NULL, created DOUBLE PRECISION NOT NULL)`,
-  `CREATE TABLE IF NOT EXISTS attempts (key TEXT PRIMARY KEY, count INTEGER NOT NULL, since DOUBLE PRECISION NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS nb_events (id SERIAL PRIMARY KEY, to_who TEXT NOT NULL, kind TEXT NOT NULL, created DOUBLE PRECISION NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS nb_attempts (key TEXT PRIMARY KEY, count INTEGER NOT NULL, since DOUBLE PRECISION NOT NULL)`,
 ]
 
 async function open() {
   // Any Postgres works (Supabase, Neon, Vercel Postgres…). Prefer the pooled URL on serverless.
-  const raw = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL || process.env.POSTGRES_URL_NON_POOLING
+  const e = process.env
+  const parts = e.POSTGRES_HOST && e.POSTGRES_PASSWORD
+    ? `postgres://${encodeURIComponent(e.POSTGRES_USER || 'postgres')}:${encodeURIComponent(e.POSTGRES_PASSWORD)}@${e.POSTGRES_HOST}:${e.POSTGRES_PORT || 5432}/${e.POSTGRES_DATABASE || 'postgres'}`
+    : null
+  const raw = e.DATABASE_URL || e.POSTGRES_URL || e.POSTGRES_PRISMA_URL || e.POSTGRES_URL_NON_POOLING || parts
   if (raw) {
     const { default: pg } = await import('pg')
     const url = new URL(raw)
@@ -86,28 +92,28 @@ export async function q(text, params = []) {
 }
 
 export async function getSetting(key) {
-  const rows = await q('SELECT value FROM settings WHERE key = $1', [key])
+  const rows = await q('SELECT value FROM nb_settings WHERE key = $1', [key])
   return rows[0]?.value ?? null
 }
 
 export async function setSetting(key, value) {
-  await q('INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', [key, String(value)])
+  await q('INSERT INTO nb_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', [key, String(value)])
 }
 
 /** Creates the value once (race-safe) and always returns the stored one. */
 export async function persistentSecret(key, bytes = 32) {
-  await q('INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', [key, crypto.randomBytes(bytes).toString('base64url')])
+  await q('INSERT INTO nb_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', [key, crypto.randomBytes(bytes).toString('base64url')])
   return getSetting(key)
 }
 
 export const dayKey = (d = new Date()) => d.toISOString().slice(0, 10)
 
 export async function addTogether(seconds) {
-  await q('INSERT INTO together (day, seconds) VALUES ($1, $2) ON CONFLICT (day) DO UPDATE SET seconds = together.seconds + EXCLUDED.seconds', [dayKey(), seconds])
+  await q('INSERT INTO nb_together (day, seconds) VALUES ($1, $2) ON CONFLICT (day) DO UPDATE SET seconds = nb_together.seconds + EXCLUDED.seconds', [dayKey(), seconds])
 }
 
 export async function togetherStats() {
-  const [{ total }] = await q('SELECT COALESCE(SUM(seconds), 0) AS total FROM together')
-  const today = (await q('SELECT seconds FROM together WHERE day = $1', [dayKey()]))[0]?.seconds ?? 0
+  const [{ total }] = await q('SELECT COALESCE(SUM(seconds), 0) AS total FROM nb_together')
+  const today = (await q('SELECT seconds FROM nb_together WHERE day = $1', [dayKey()]))[0]?.seconds ?? 0
   return { total: Math.round(Number(total)), today: Math.round(Number(today)) }
 }

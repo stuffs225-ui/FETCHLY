@@ -22,7 +22,7 @@ function stateFrom(row, now) {
 }
 
 async function pushEvent(to, kind) {
-  await q('INSERT INTO events (to_who, kind, created) VALUES ($1, $2, $3)', [to, kind, Date.now()])
+  await q('INSERT INTO nb_events (to_who, kind, created) VALUES ($1, $2, $3)', [to, kind, Date.now()])
 }
 
 async function sync(req, res, who) {
@@ -30,14 +30,14 @@ async function sync(req, res, who) {
   const now = Date.now()
   const partner = partnerOf(who)
   await q(
-    `INSERT INTO presence (who, beat, visible, seen) VALUES ($1, $2, $3, $2)
+    `INSERT INTO nb_presence (who, beat, visible, seen) VALUES ($1, $2, $3, $2)
      ON CONFLICT (who) DO UPDATE SET beat = EXCLUDED.beat, visible = EXCLUDED.visible, seen = EXCLUDED.seen`,
     [who, now, visible !== false],
   )
   const [pres, waiting, events, distRaw] = await Promise.all([
-    q('SELECT who, beat, visible, seen FROM presence'),
-    q('SELECT COUNT(*)::int AS n FROM bottles WHERE author = $1 AND opened_at IS NULL', [partner]),
-    q('DELETE FROM events WHERE to_who = $1 RETURNING kind', [who]),
+    q('SELECT who, beat, visible, seen FROM nb_presence'),
+    q('SELECT COUNT(*)::int AS n FROM nb_bottles WHERE author = $1 AND opened_at IS NULL', [partner]),
+    q('DELETE FROM nb_events WHERE to_who = $1 RETURNING kind', [who]),
     getSetting('distance'),
   ])
   const by = Object.fromEntries(pres.map((r) => [r.who, r]))
@@ -90,7 +90,7 @@ function readDistance(raw) {
  * claim "very close". Coordinates stay in the database.
  */
 async function recomputeDistance() {
-  const rows = Object.fromEntries((await q('SELECT * FROM locations')).map((r) => [r.who, r]))
+  const rows = Object.fromEntries((await q('SELECT * FROM nb_locations')).map((r) => [r.who, r]))
   const at = { a: rows.a?.updated ?? null, b: rows.b?.updated ?? null }
   const old = await getSetting('distance')
   let closest = null
@@ -116,7 +116,7 @@ async function putLocation(req, res, who) {
     return send(res, 400, { error: 'bad_location' })
   }
   await q(
-    `INSERT INTO locations (who, lat, lng, accuracy, updated) VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO nb_locations (who, lat, lng, accuracy, updated) VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (who) DO UPDATE SET lat = EXCLUDED.lat, lng = EXCLUDED.lng, accuracy = EXCLUDED.accuracy, updated = EXCLUDED.updated`,
     [who, Math.round(lat * 1e4) / 1e4, Math.round(lng * 1e4) / 1e4, Math.min(Math.max(accuracy, 1), 100000), Date.now()],
   )
@@ -125,7 +125,7 @@ async function putLocation(req, res, who) {
 }
 
 async function deleteLocation(_req, res, who) {
-  await q('DELETE FROM locations WHERE who = $1', [who])
+  await q('DELETE FROM nb_locations WHERE who = $1', [who])
   await recomputeDistance()
   send(res, 204)
 }
@@ -145,7 +145,7 @@ const LIST = 'id, author, kind, body, created_at, opened_at'
 async function throwText(req, res, who) {
   const text = String((await readJson(req)).text ?? '').trim().slice(0, MAX_TEXT)
   if (!text) return send(res, 400, { error: 'empty' })
-  const r = await q("INSERT INTO bottles (author, kind, body, created_at) VALUES ($1, 'text', $2, $3) RETURNING id", [who, text, Date.now()])
+  const r = await q("INSERT INTO nb_bottles (author, kind, body, created_at) VALUES ($1, 'text', $2, $3) RETURNING id", [who, text, Date.now()])
   send(res, 201, { id: r[0].id })
 }
 
@@ -155,14 +155,14 @@ async function throwVoice(req, res, who, url) {
   if (!AUDIO_TYPES.has(mime) || !buf || buf.length < 500) return send(res, 400, { error: 'bad_audio' })
   const text = (url.searchParams.get('text') ?? '').trim().slice(0, MAX_TEXT) || null
   const r = await q(
-    "INSERT INTO bottles (author, kind, body, audio_mime, audio_b64, created_at) VALUES ($1, 'voice', $2, $3, $4, $5) RETURNING id",
+    "INSERT INTO nb_bottles (author, kind, body, audio_mime, audio_b64, created_at) VALUES ($1, 'voice', $2, $3, $4, $5) RETURNING id",
     [who, text, mime, buf.toString('base64'), Date.now()],
   )
   send(res, 201, { id: r[0].id })
 }
 
 async function waitingFor(who) {
-  return (await q('SELECT COUNT(*)::int AS n FROM bottles WHERE author = $1 AND opened_at IS NULL', [partnerOf(who)]))[0].n
+  return (await q('SELECT COUNT(*)::int AS n FROM nb_bottles WHERE author = $1 AND opened_at IS NULL', [partnerOf(who)]))[0].n
 }
 
 /**
@@ -171,37 +171,37 @@ async function waitingFor(who) {
  * favoured (3:1) but an old one can always float back.
  */
 async function draw(_req, res, who) {
-  const all = await q(`SELECT ${LIST} FROM bottles WHERE author = $1`, [partnerOf(who)])
+  const all = await q(`SELECT ${LIST} FROM nb_bottles WHERE author = $1`, [partnerOf(who)])
   if (all.length === 0) return send(res, 200, { empty: true })
   const unread = all.filter((b) => b.opened_at === null)
   const pool = unread.length > 0 ? [...unread, ...unread, ...unread, ...all] : all
   const picked = pool[crypto.randomInt(pool.length)]
   const fresh = picked.opened_at === null
   const now = Date.now()
-  await q('UPDATE bottles SET opened_at = COALESCE(opened_at, $1), opened_count = opened_count + 1 WHERE id = $2', [now, picked.id])
+  await q('UPDATE nb_bottles SET opened_at = COALESCE(opened_at, $1), opened_count = opened_count + 1 WHERE id = $2', [now, picked.id])
   if (fresh) await pushEvent(partnerOf(who), 'opened')
   send(res, 200, { bottle: shape({ ...picked, opened_at: picked.opened_at ?? now }), fresh, waiting: await waitingFor(who) })
 }
 
 async function listMine(_req, res, who) {
-  const rows = await q(`SELECT ${LIST} FROM bottles WHERE author = $1 ORDER BY created_at DESC`, [who])
+  const rows = await q(`SELECT ${LIST} FROM nb_bottles WHERE author = $1 ORDER BY created_at DESC`, [who])
   send(res, 200, rows.map(shape))
 }
 
 async function listKept(_req, res, who) {
-  const rows = await q(`SELECT ${LIST} FROM bottles WHERE author = $1 AND opened_at IS NOT NULL ORDER BY opened_at DESC`, [partnerOf(who)])
+  const rows = await q(`SELECT ${LIST} FROM nb_bottles WHERE author = $1 AND opened_at IS NOT NULL ORDER BY opened_at DESC`, [partnerOf(who)])
   send(res, 200, rows.map(shape))
 }
 
 async function removeBottle(_req, res, who, id) {
-  const r = await q('DELETE FROM bottles WHERE id = $1 AND author = $2 RETURNING id', [id, who])
+  const r = await q('DELETE FROM nb_bottles WHERE id = $1 AND author = $2 RETURNING id', [id, who])
   if (!r.length) return send(res, 404, { error: 'not_found' })
   send(res, 204)
 }
 
 // A voice note can't be peeked at before its recipient has drawn the bottle. Supports Range for Safari.
 async function audio(req, res, who, id) {
-  const r = (await q("SELECT author, audio_mime, audio_b64, opened_at FROM bottles WHERE id = $1 AND kind = 'voice'", [id]))[0]
+  const r = (await q("SELECT author, audio_mime, audio_b64, opened_at FROM nb_bottles WHERE id = $1 AND kind = 'voice'", [id]))[0]
   if (!r) return send(res, 404, { error: 'not_found' })
   if (r.author !== who && r.opened_at === null) return send(res, 403, { error: 'forbidden' })
   const buf = Buffer.from(r.audio_b64, 'base64')
@@ -299,7 +299,7 @@ export async function handle(req, res) {
 
     send(res, 404, { error: 'not_found' })
   } catch (err) {
-    if (err instanceof NoDatabaseError) return send(res, 503, { error: 'no_database' })
+    if (err instanceof NoDatabaseError) return send(res, 503, { error: 'no_database', seen: err.seen })
     if (err instanceof DatabaseUnavailableError) { console.error('[db]', err.detail); return send(res, 503, { error: 'db_unavailable', detail: err.detail }) }
     if (err?.status === 413) return send(res, 413, { error: 'too_large' })
     console.error(err)

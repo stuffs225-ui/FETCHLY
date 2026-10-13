@@ -7,11 +7,11 @@ import { api, ApiError } from '@/lib/api'
 import { makeCopy } from '@/lib/copy'
 import type { Profile, Who } from '@/lib/types'
 
-type Stage = { name: 'loading' } | { name: 'setup'; links: Record<Who, string> } | { name: 'nodb'; detail?: string; unreachable?: boolean } | { name: 'nolink' } | { name: 'invalid' } | { name: 'form'; who: Who; needsPassword: boolean }
+type Stage = { name: 'loading' } | { name: 'setup'; links: Record<Who, string> } | { name: 'nodb'; detail?: string; unreachable?: boolean; seen?: string[] } | { name: 'nolink' } | { name: 'invalid' } | { name: 'form'; who: Who; needsPassword: boolean }
 
 function dbStage(e: unknown): Stage | null {
   if (!(e instanceof ApiError) || e.status !== 503) return null
-  return { name: 'nodb', unreachable: e.message === 'db_unavailable', detail: e.detail }
+  return { name: 'nodb', unreachable: e.message === 'db_unavailable', detail: e.detail, seen: e.seen }
 }
 
 /**
@@ -77,6 +77,12 @@ export function Join({ onEnter }: { onEnter: (p: Profile) => void }) {
           <p className="text-lg text-ink">{message[0]}</p>
           <p className="mt-1.5 text-sm text-mist">{message[1]}</p>
         </motion.div>
+      )}
+
+      {stage.name === 'nodb' && !stage.unreachable && (
+        <p dir="ltr" className="mt-5 max-w-xs text-center text-[11px] leading-5 text-mist/70">
+          {stage.seen?.length ? `Found: ${stage.seen.join(', ')}` : 'No database-related environment variables found'}
+        </p>
       )}
 
       {stage.name === 'setup' && (

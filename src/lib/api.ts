@@ -1,10 +1,12 @@
 export class ApiError extends Error {
   status: number
   detail?: string
-  constructor(status: number, message: string, detail?: string) {
+  seen?: string[]
+  constructor(status: number, message: string, detail?: string, seen?: string[]) {
     super(message)
     this.status = status
     this.detail = detail
+    this.seen = seen
   }
 }
 
@@ -12,7 +14,7 @@ async function request<T>(method: string, path: string, body?: BodyInit | null, 
   const res = await fetch(`/api${path}`, { method, body, headers, credentials: 'same-origin' })
   if (res.status === 204) return undefined as T
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new ApiError(res.status, data?.error ?? 'request_failed', data?.detail)
+  if (!res.ok) throw new ApiError(res.status, data?.error ?? 'request_failed', data?.detail, data?.seen)
   return data as T
 }
 
