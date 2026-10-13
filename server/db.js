@@ -112,7 +112,8 @@ function supabaseRest(url, key) {
   const call = async (fn, query) => {
     const res = await fetch(`${base}/rest/v1/rpc/${fn}`, {
       method: 'POST',
-      headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      // New-style keys (sb_secret_…) are not JWTs and go only in `apikey`; legacy JWT keys go in both.
+      headers: { apikey: key, ...(key.startsWith('sb_') ? {} : { Authorization: `Bearer ${key}` }), 'Content-Type': 'application/json' },
       body: JSON.stringify({ query }),
     })
     const raw = await res.text()
