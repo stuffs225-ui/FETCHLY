@@ -8,7 +8,7 @@ import { api, ApiError } from '@/lib/api'
 import { makeCopy } from '@/lib/copy'
 import type { Profile, Who } from '@/lib/types'
 
-type Stage = { name: 'loading' } | { name: 'setup'; links: Record<Who, string> } | { name: 'nodb'; detail?: string; unreachable?: boolean; seen?: string[] } | { name: 'schema'; sql: string; dashboard: string } | { name: 'nolink' } | { name: 'invalid' } | { name: 'form'; who: Who; needsPassword: boolean }
+type Stage = { name: 'loading' } | { name: 'setup'; links: Record<Who, string>; base: string | null } | { name: 'nodb'; detail?: string; unreachable?: boolean; seen?: string[] } | { name: 'schema'; sql: string; dashboard: string } | { name: 'nolink' } | { name: 'invalid' } | { name: 'form'; who: Who; needsPassword: boolean }
 
 function dbStage(e: unknown): Stage | null {
   if (!(e instanceof ApiError) || e.status !== 503) return null
@@ -32,8 +32,8 @@ export function Join({ onEnter }: { onEnter: (p: Profile) => void }) {
   useEffect(() => {
     if (!token) {
       // No private link: if nobody has set up yet, show both links (first run only); otherwise a quiet "use your link" note.
-      api.get<{ links: Record<Who, string> }>('/setup')
-        .then((r) => setStage({ name: 'setup', links: r.links }))
+      api.get<{ links: Record<Who, string>; base: string | null }>('/setup')
+        .then((r) => setStage({ name: 'setup', links: r.links, base: r.base }))
         .catch((e) => setStage(dbStage(e) ?? { name: 'nolink' }))
       return
     }
@@ -101,7 +101,7 @@ export function Join({ onEnter }: { onEnter: (p: Profile) => void }) {
           <a href={`/?k=${stage.links.b}`} className="block rounded-2xl bg-accent py-3.5 text-center text-base font-bold text-on-accent active:scale-[0.98]">
             ١) افتح رابطك أنت واختر كلمة سرّ
           </a>
-          <LinkCard receiver="a" keyValue={stage.links.a} title="٢) أرسل رابطها لها" />
+          <LinkCard receiver="a" keyValue={stage.links.a} base={stage.base} title="٢) انسخ رابطها وأرسله لها" />
           <p className="px-2 text-center text-xs leading-6 text-mist">بعد أن تفتح رابطك وتختار كلمة السرّ، تختفي هذه الصفحة، ولن يُعرض الرابطان لأحد بعدها.</p>
         </motion.div>
       )}

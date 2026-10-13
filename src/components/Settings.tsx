@@ -39,8 +39,9 @@ interface Props {
 export function Settings({ open, onClose, haptics, setHaptics, sound, setSound, theme, setTheme, loc, partner }: Props) {
   const locOn = loc.status === 'on'
   const [partnerKey, setPartnerKey] = useState<string | null>(null)
+  const [base, setBase] = useState<string | null>(null)
   useEffect(() => {
-    if (open) api.get<{ key: string }>('/partner-link').then((r) => setPartnerKey(r.key)).catch(() => {})
+    if (open) api.get<{ key: string; base: string | null }>('/partner-link').then((r) => { setPartnerKey(r.key); setBase(r.base) }).catch(() => {})
   }, [open])
   return (
     <Sheet open={open} onClose={onClose} title="الإعدادات">
@@ -71,7 +72,7 @@ export function Settings({ open, onClose, haptics, setHaptics, sound, setSound, 
           />
         )}
         <Toggle on={haptics} onChange={setHaptics} label="اهتزاز مع كل نبضة عندما تكونان معًا" icon={<Smartphone className="h-5 w-5" />} />
-        {partnerKey && <LinkCard receiver={partner} keyValue={partnerKey} title={partner === 'a' ? 'إعادة إرسال رابطها' : 'إعادة إرسال رابطه'} />}
+        {partnerKey && <LinkCard receiver={partner} keyValue={partnerKey} base={base} title={partner === 'a' ? 'إعادة إرسال رابطها' : 'إعادة إرسال رابطه'} />}
         <Toggle on={sound} onChange={(v) => { if (v) void import('@/lib/sound').then((m) => m.unlockSound()); setSound(v) }} label="صوت نبض القلب" hint="هادئ ومنخفض" icon={<Volume2 className="h-5 w-5" />} />
       </div>
     </Sheet>

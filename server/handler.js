@@ -12,6 +12,12 @@ const AUDIO_TYPES = new Set(['audio/webm', 'audio/mp4', 'audio/ogg', 'audio/mpeg
 
 const profile = (who) => ({ who, partner: partnerOf(who) })
 
+/** On Vercel's production deployment, links should always use the public production address. */
+function publicBase() {
+  const host = process.env.VERCEL_ENV === 'production' ? process.env.VERCEL_PROJECT_PRODUCTION_URL : null
+  return host ? `https://${host}` : null
+}
+
 // ---------------------------------------------------------------- presence
 
 function stateFrom(row, now) {
@@ -275,7 +281,7 @@ export async function handle(req, res) {
     if (path === '/api/setup' && m === 'GET') {
       // First run only: until someone has chosen a password the home page can show both private links.
       if (await anyPasswordSet()) return send(res, 404, { error: 'done' })
-      return send(res, 200, { links: (await config()).tokens })
+      return send(res, 200, { links: (await config()).tokens, base: publicBase() })
     }
 
     const who = await whoFromRequest(req)
@@ -284,7 +290,7 @@ export async function handle(req, res) {
     if (path === '/api/me' && m === 'GET') return send(res, 200, profile(who))
     if (path === '/api/sync' && m === 'POST') return await sync(req, res, who)
     if (path === '/api/ripple' && m === 'POST') { await pushEvent(partnerOf(who), 'ripple'); return send(res, 204) }
-    if (path === '/api/partner-link' && m === 'GET') return send(res, 200, { key: (await config()).tokens[partnerOf(who)] })
+    if (path === '/api/partner-link' && m === 'GET') return send(res, 200, { key: (await config()).tokens[partnerOf(who)], base: publicBase() })
     if (path === '/api/location' && m === 'PUT') return await putLocation(req, res, who)
     if (path === '/api/location' && m === 'DELETE') return await deleteLocation(req, res, who)
 
