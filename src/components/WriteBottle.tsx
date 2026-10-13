@@ -111,18 +111,18 @@ export function WriteBottle({ open, onClose, copy, onThrown }: { open: boolean; 
         onChange={(e) => setText(e.target.value.slice(0, MAX))}
         placeholder={copy.sea.placeholder}
         rows={5}
-        className="w-full resize-none rounded-2xl border border-white/10 bg-white/[0.05] p-4 text-[17px] leading-8 text-ink outline-none placeholder:text-mist/60 focus:border-rose/50 focus:bg-white/[0.07]"
+        className="w-full resize-none rounded-2xl border border-glass-line bg-glass p-4 text-[17px] leading-8 text-ink outline-none placeholder:text-mist/60 focus:border-rose/50"
       />
       <div className="mt-1 text-end text-xs text-mist/70">{MAX - text.length}</div>
 
       <div className="mt-3">
         {rec === 'idle' && (
-          <button onClick={start} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/20 py-3.5 text-sm text-mist transition-colors hover:border-rose/50 hover:text-ink">
+          <button onClick={start} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-glass-line py-3.5 text-sm text-mist transition-colors hover:border-rose/50 hover:text-ink">
             <Mic className="h-4.5 w-4.5" /> سجّل صوتك (حتى {MAX_SECONDS} ثانية)
           </button>
         )}
         {rec === 'recording' && (
-          <button onClick={stop} className="flex w-full items-center justify-center gap-3 rounded-2xl border border-rose/60 bg-rose/10 py-3.5 text-sm text-ink">
+          <button onClick={stop} className="flex w-full items-center justify-center gap-3 rounded-2xl border border-accent/60 bg-accent/10 py-3.5 text-sm text-ink">
             <span className="relative flex h-3 w-3"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose opacity-75" /><span className="relative inline-flex h-3 w-3 rounded-full bg-rose" /></span>
             <span className="tabular-nums">{clock(seconds)}</span>
             <Square className="h-4 w-4" fill="currentColor" /> إيقاف
@@ -131,7 +131,7 @@ export function WriteBottle({ open, onClose, copy, onThrown }: { open: boolean; 
         {rec === 'done' && url && (
           <div className="flex items-center gap-2">
             <div className="flex-1"><VoicePlayer src={url} /></div>
-            <button onClick={discardVoice} aria-label="حذف التسجيل" className="rounded-full p-3 text-mist hover:bg-white/10 hover:text-ink"><Trash2 className="h-5 w-5" /></button>
+            <button onClick={discardVoice} aria-label="حذف التسجيل" className="rounded-full p-3 text-mist hover:bg-glass hover:text-ink"><Trash2 className="h-5 w-5" /></button>
           </div>
         )}
       </div>
@@ -139,7 +139,7 @@ export function WriteBottle({ open, onClose, copy, onThrown }: { open: boolean; 
       <button
         onClick={send}
         disabled={!canSend}
-        className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-br from-coral to-rose py-4 text-base font-bold text-night shadow-[0_12px_40px_rgba(255,107,139,.38)] transition-all active:scale-[0.98] disabled:opacity-35 disabled:shadow-none"
+        className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-accent py-4 text-base font-bold text-night transition-all active:scale-[0.98] disabled:opacity-35"
       >
         <Send className="h-4.5 w-4.5 -scale-x-100" /> {copy.sea.throwIt}
       </button>

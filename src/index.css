@@ -5,69 +5,80 @@
 @font-face { font-family: "Cairo"; font-weight: 400; font-display: swap; src: url("/fonts/cairo-latin-400.ttf") format("truetype"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215; }
 @font-face { font-family: "Cairo"; font-weight: 700; font-display: swap; src: url("/fonts/cairo-latin-700.ttf") format("truetype"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215; }
 
-@theme {
+/* Three calm, flat palettes. Switch from Settings; the choice is remembered per phone. */
+:root, [data-theme="night"] {
+  --base: #15171c; --sheet: #1c1f26; --ink: #e8e4de; --mist: #9a978f;
+  --accent: #c9958f; --accent-soft: #d8aaa4; --on-accent: #1b1417;
+  --heart-a: #c9958f; --heart-b: #8f9bb3;
+  --surface: rgba(255,255,255,.055); --line: rgba(255,255,255,.1); --scrim: rgba(10,11,14,.7);
+  --sea-1: #1b1f27; --sea-2: #20252f; --sea-3: #262c38;
+  color-scheme: dark;
+}
+[data-theme="paper"] {
+  --base: #f4efe8; --sheet: #fbf8f3; --ink: #2b2623; --mist: #7c7168;
+  --accent: #b8665a; --accent-soft: #a65a4f; --on-accent: #fffaf5;
+  --heart-a: #c4756a; --heart-b: #8493ad;
+  --surface: rgba(43,38,35,.05); --line: rgba(43,38,35,.12); --scrim: rgba(244,239,232,.75);
+  --sea-1: #e8dfd3; --sea-2: #dfd3c4; --sea-3: #d4c6b5;
+  color-scheme: light;
+}
+[data-theme="blue"] {
+  --base: #101823; --sheet: #172231; --ink: #dde4ec; --mist: #8d9aab;
+  --accent: #d6a08c; --accent-soft: #e0b4a2; --on-accent: #1a1410;
+  --heart-a: #d6a08c; --heart-b: #8fa8c4;
+  --surface: rgba(255,255,255,.055); --line: rgba(255,255,255,.1); --scrim: rgba(8,13,20,.7);
+  --sea-1: #16212f; --sea-2: #1b2839; --sea-3: #213045;
+  color-scheme: dark;
+}
+
+@theme inline {
   --font-sans: "Cairo", ui-sans-serif, system-ui, sans-serif;
-
-  --color-night: #0d0a16;
-  --color-dusk: #1a1030;
-  --color-plum: #2a1745;
-  --color-rose: #ff7a9c;
-  --color-rose-soft: #ffb3c6;
-  --color-coral: #ffa58a;
-  --color-gold: #f4d3b5;
-  --color-ink: #f7edf3;
-  --color-mist: #b8a8c6;
-  --color-glass: rgba(255, 255, 255, 0.06);
-  --color-glass-line: rgba(255, 255, 255, 0.11);
-
-  --animate-drift-a: drift-a 26s ease-in-out infinite;
-  --animate-drift-b: drift-b 32s ease-in-out infinite;
-  --animate-drift-c: drift-c 38s ease-in-out infinite;
-  --animate-bob: bob 6s ease-in-out infinite;
-  --animate-wave: wave 14s linear infinite;
-  --animate-wave-slow: wave 22s linear infinite reverse;
-  --animate-breathe: breathe 5.5s ease-in-out infinite;
-  --animate-petal: petal 14s linear infinite;
-  --animate-shake-x: shake-x .45s ease;
+  --color-night: var(--base);
+  --color-dusk: var(--sheet);
+  --color-ink: var(--ink);
+  --color-mist: var(--mist);
+  --color-rose: var(--accent);
+  --color-coral: var(--accent);
+  --color-rose-soft: var(--accent-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-glass: var(--surface);
+  --color-glass-line: var(--line);
 }
 
-@keyframes drift-a { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(8vw,6vh) scale(1.15); } }
-@keyframes drift-b { 0%,100% { transform: translate(0,0) scale(1.1); } 50% { transform: translate(-10vw,-5vh) scale(.95); } }
-@keyframes drift-c { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-4vw,9vh) scale(1.2); } }
-@keyframes bob { 0%,100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-9px) rotate(5deg); } }
+@theme {
+  --animate-bob: bob 7s ease-in-out infinite;
+  --animate-wave: wave 26s linear infinite;
+  --animate-wave-slow: wave 40s linear infinite reverse;
+  --animate-breathe: breathe 6s ease-in-out infinite;
+}
+
+@keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-6px) rotate(3deg); } }
 @keyframes wave { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-@keyframes breathe { 0%,100% { opacity: .55; transform: scale(1); } 50% { opacity: 1; transform: scale(1.04); } }
-@keyframes petal {
-  0%   { transform: translate3d(0,-12vh,0) rotate(0deg); opacity: 0; }
-  10%  { opacity: .75; }
-  50%  { transform: translate3d(7vw,52vh,0) rotate(180deg); }
-  90%  { opacity: .6; }
-  100% { transform: translate3d(-4vw,112vh,0) rotate(340deg); opacity: 0; }
-}
-@keyframes shake-x { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-7px); } 40%,80% { transform: translateX(7px); } }
+@keyframes breathe { 0%,100% { opacity: .6; } 50% { opacity: 1; } }
 
 html, body, #root { height: 100%; }
 
 body {
   margin: 0;
-  background: var(--color-night);
-  color: var(--color-ink);
+  background: var(--base);
+  color: var(--ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
   overflow: hidden;
+  transition: background-color .5s ease, color .5s ease;
 }
 
 button { font: inherit; cursor: pointer; }
 input, textarea { font: inherit; }
-::selection { background: rgba(255, 122, 156, .35); }
+::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
 
 .glass {
-  background: var(--color-glass);
-  border: 1px solid var(--color-glass-line);
-  backdrop-filter: blur(22px) saturate(140%);
-  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  background: var(--surface);
+  border: 1px solid var(--line);
 }
 
 .safe-top { padding-top: max(env(safe-area-inset-top), 0.75rem); }

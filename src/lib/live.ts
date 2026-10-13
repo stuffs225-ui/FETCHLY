@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { PState, Together } from './types'
+import type { DistanceInfo, PState, Together } from './types'
 
 export interface LiveState {
   connected: boolean
   partner: { state: PState; lastSeen: number | null }
   together: Together
   waiting: number
+  distance: DistanceInfo
 }
 
 interface Handlers {
@@ -25,6 +26,7 @@ export function useLive(handlers: Handlers) {
     partner: { state: 'gone', lastSeen: null },
     together: { total: 0, today: 0 },
     waiting: 0,
+    distance: { meters: null, precise: false, at: { a: null, b: null }, closestToday: null },
   })
   const hRef = useRef(handlers)
   hRef.current = handlers
@@ -73,7 +75,7 @@ export function useLive(handlers: Handlers) {
         if (m.t === 'hello') {
           setPartner(m.partner.state, m.partner.lastSeen, true)
           waitingRef.current = m.waiting
-          setState((s) => ({ ...s, together: m.together, waiting: m.waiting }))
+          setState((s) => ({ ...s, together: m.together, waiting: m.waiting, distance: m.distance }))
         } else if (m.t === 'partner') {
           setPartner(m.state, m.lastSeen)
         } else if (m.t === 'sync') {
@@ -86,6 +88,8 @@ export function useLive(handlers: Handlers) {
           offset.current = samples.reduce((best, s) => (s.rtt < best.rtt ? s : best)).offset
         } else if (m.t === 'together') {
           setState((s) => ({ ...s, together: { total: m.total, today: m.today } }))
+        } else if (m.t === 'distance') {
+          setState((s) => ({ ...s, distance: { meters: m.meters, precise: m.precise, at: m.at, closestToday: m.closestToday } }))
         } else if (m.t === 'ripple') {
           hRef.current.onRipple()
         } else if (m.t === 'opened') {

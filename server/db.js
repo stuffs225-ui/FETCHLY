@@ -18,6 +18,12 @@ CREATE TABLE IF NOT EXISTS settings (
   value TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS slots (
+  who TEXT PRIMARY KEY,
+  passHash TEXT,
+  passSalt TEXT
+);
+
 CREATE TABLE IF NOT EXISTS bottles (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   author TEXT NOT NULL,
@@ -29,17 +35,26 @@ CREATE TABLE IF NOT EXISTS bottles (
   openedCount INTEGER NOT NULL DEFAULT 0
 );
 
-CREATE TABLE IF NOT EXISTS pushSubs (
-  endpoint TEXT PRIMARY KEY,
-  who TEXT NOT NULL,
-  json TEXT NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS together (
   day TEXT PRIMARY KEY,
   seconds INTEGER NOT NULL DEFAULT 0
 );
+
+-- Last known position per person. Never leaves the server: the other person only ever receives a distance.
+CREATE TABLE IF NOT EXISTS locations (
+  who TEXT PRIMARY KEY,
+  lat REAL NOT NULL,
+  lng REAL NOT NULL,
+  accuracy REAL NOT NULL,
+  updatedAt INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS closest (
+  day TEXT PRIMARY KEY,
+  meters REAL NOT NULL
+);
 `)
+db.exec('DROP TABLE IF EXISTS pushSubs')
 
 export function getSetting(key, fallback = null) {
   const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key)
@@ -51,10 +66,10 @@ export function setSetting(key, value) {
 }
 
 /** A secret that survives restarts without needing any manual configuration. */
-export function persistentSecret(key) {
+export function persistentSecret(key, bytes = 32) {
   let v = getSetting(key)
   if (!v) {
-    v = crypto.randomBytes(32).toString('hex')
+    v = crypto.randomBytes(bytes).toString('base64url')
     setSetting(key, v)
   }
   return v

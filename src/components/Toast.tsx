@@ -31,7 +31,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.97 }}
               transition={{ type: 'spring', stiffness: 260, damping: 26 }}
-              className="glass max-w-sm rounded-full px-5 py-2.5 text-center text-sm text-ink shadow-[0_8px_40px_rgba(255,107,139,.18)]"
+              className="max-w-sm rounded-2xl border border-glass-line bg-dusk px-5 py-2.5 text-center text-sm text-ink"
             >
               {t.message}
             </motion.div>

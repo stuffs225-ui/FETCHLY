@@ -17,7 +17,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-center">
           <motion.div
-            className="absolute inset-0 bg-night/70 backdrop-blur-sm"
+            className="absolute inset-0 bg-[var(--scrim)] "
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -27,7 +27,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
             role="dialog"
             aria-modal="true"
             aria-label={title}
-            className="glass relative max-h-[88dvh] w-full max-w-lg overflow-y-auto rounded-t-[28px] bg-dusk/90 px-6 pb-8 pt-5 safe-bottom scroll-soft"
+            className="relative max-h-[88dvh] border border-glass-line w-full max-w-lg overflow-y-auto rounded-t-[28px] bg-dusk px-6 pb-8 pt-5 safe-bottom scroll-soft"
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
@@ -37,10 +37,10 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
             dragElastic={{ top: 0, bottom: 0.5 }}
             onDragEnd={(_, info) => info.offset.y > 120 && onClose()}
           >
-            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/20" />
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-mist/30" />
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold text-ink">{title}</h2>
-              <button onClick={onClose} aria-label="إغلاق" className="rounded-full p-2 text-mist transition-colors hover:bg-white/10 hover:text-ink">
+              <button onClick={onClose} aria-label="إغلاق" className="rounded-full p-2 text-mist transition-colors hover:bg-glass hover:text-ink">
                 <X className="h-5 w-5" />
               </button>
             </div>

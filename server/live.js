@@ -1,13 +1,11 @@
 import { WebSocketServer } from 'ws'
-import { whoFromCookieHeader, partnerOf, names, config } from './auth.js'
+import { whoFromCookieHeader, partnerOf } from './auth.js'
 import { addTogether, togetherStats, db } from './db.js'
-import { pushTo } from './push.js'
+import { distanceInfo, onDistanceChange } from './location.js'
 
 // who -> Set<{ ws, visible }>
 const conns = { a: new Set(), b: new Set() }
 const lastSeen = { a: null, b: null }
-const lastEnterPush = { a: 0, b: 0 }
-const ENTER_PUSH_COOLDOWN = 20 * 60 * 1000
 
 /** 'here' = connected & looking at it, 'away' = connected but hidden, 'gone' = not connected. */
 export function stateOf(who) {
@@ -41,20 +39,15 @@ function announce(who, prevState) {
   if (state !== 'here') lastSeen[who] = Date.now()
   const p = partnerOf(who)
   broadcastTo(p, { t: 'partner', ...partnerPayload(p) })
-
-  // They just showed up while the other one isn't looking → a gentle nudge.
-  if (state === 'here' && prevState === 'gone' && stateOf(p) !== 'here' && Date.now() - lastEnterPush[who] > ENTER_PUSH_COOLDOWN) {
-    lastEnterPush[who] = Date.now()
-    const f = config.genders[who] === 'f'
-    pushTo(p, {
-      title: 'نبضنا',
-      body: `${names()[who]} ${f ? 'دخلت' : 'دخل'}… ${f ? 'قلبها' : 'قلبه'} ينبض الآن`,
-      tag: 'presence',
-    })
-  }
 }
 
 export function attachLive(server) {
+  onDistanceChange(() => {
+    const d = distanceInfo()
+    broadcastTo('a', { t: 'distance', ...d })
+    broadcastTo('b', { t: 'distance', ...d })
+  })
+
   const wss = new WebSocketServer({ noServer: true, maxPayload: 4 * 1024 })
 
   server.on('upgrade', (req, socket, head) => {
@@ -87,6 +80,7 @@ export function attachLive(server) {
       partner: partnerPayload(who),
       together: togetherStats(),
       waiting: waitingFor(who),
+      distance: distanceInfo(),
     })
     announce(who, prev)
 

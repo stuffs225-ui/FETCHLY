@@ -1,49 +1,60 @@
 import crypto from 'node:crypto'
-import { persistentSecret, getSetting } from './db.js'
+import { db, persistentSecret } from './db.js'
 
 export const isProduction = process.env.NODE_ENV === 'production'
 const secret = process.env.SESSION_SECRET || persistentSecret('cookieSecret')
 const COOKIE = 'nabd'
-const MAX_AGE = 1000 * 60 * 60 * 24 * 180
+// Browsers cap cookie lifetime at ~400 days, so this is effectively "until they clear the site data".
+const MAX_AGE = 1000 * 60 * 60 * 24 * 399
 
 export const WHO = ['a', 'b']
 export const partnerOf = (who) => (who === 'a' ? 'b' : 'a')
 
-export const config = {
-  passphrase: process.env.ROOM_PASSPHRASE || (isProduction ? '' : 'dev'),
-  // Grammatical gender used for Arabic copy ('m' | 'f') — slot A is "him", slot B is "her" by default.
-  genders: { a: process.env.GENDER_A === 'f' ? 'f' : 'm', b: process.env.GENDER_B === 'm' ? 'm' : 'f' },
-  defaultNames: { a: 'هو', b: 'هي' },
+/** Each person has one private link. Slot A is "her", slot B is "him". Nothing is shown by name. */
+export const linkTokens = {
+  a: process.env.LINK_TOKEN_A || persistentSecret('linkTokenA', 18),
+  b: process.env.LINK_TOKEN_B || persistentSecret('linkTokenB', 18),
 }
 
-export function names() {
-  return {
-    a: getSetting('name_a') || config.defaultNames.a,
-    b: getSetting('name_b') || config.defaultNames.b,
-  }
+const sha = (v) => crypto.createHash('sha256').update(String(v)).digest()
+export const safeEqual = (a, b) => crypto.timingSafeEqual(sha(a), sha(b))
+
+export function whoForToken(token) {
+  if (typeof token !== 'string' || token.length < 8) return null
+  // Compare against both so timing never reveals which one was close.
+  const a = safeEqual(token, linkTokens.a)
+  const b = safeEqual(token, linkTokens.b)
+  return a ? 'a' : b ? 'b' : null
+}
+
+const hashPassword = (password, salt) => crypto.scryptSync(password, salt, 32).toString('hex')
+
+export function hasPassword(who) {
+  return Boolean(db.prepare('SELECT passHash FROM slots WHERE who = ?').get(who)?.passHash)
+}
+
+export function setPassword(who, password) {
+  const salt = crypto.randomBytes(16).toString('hex')
+  db.prepare(
+    'INSERT INTO slots (who, passHash, passSalt) VALUES (?, ?, ?) ON CONFLICT(who) DO UPDATE SET passHash = excluded.passHash, passSalt = excluded.passSalt'
+  ).run(who, hashPassword(password, salt), salt)
+}
+
+export function checkPassword(who, password) {
+  const row = db.prepare('SELECT passHash, passSalt FROM slots WHERE who = ?').get(who)
+  if (!row?.passHash) return false
+  return safeEqual(hashPassword(password, row.passSalt), row.passHash)
+}
+
+export function resetPassword(who) {
+  db.prepare('DELETE FROM slots WHERE who = ?').run(who)
 }
 
 const sign = (value) => crypto.createHmac('sha256', secret).update(value).digest('base64url')
 
-export function safeEqual(a, b) {
-  const ha = crypto.createHash('sha256').update(String(a)).digest()
-  const hb = crypto.createHash('sha256').update(String(b)).digest()
-  return crypto.timingSafeEqual(ha, hb)
-}
-
 export function issueCookie(res, who) {
   const value = `${who}.${Date.now()}`
-  res.cookie(COOKIE, `${value}.${sign(value)}`, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: isProduction,
-    maxAge: MAX_AGE,
-    path: '/',
-  })
-}
-
-export function clearCookie(res) {
-  res.clearCookie(COOKIE, { path: '/' })
+  res.cookie(COOKIE, `${value}.${sign(value)}`, { httpOnly: true, sameSite: 'lax', secure: isProduction, maxAge: MAX_AGE, path: '/' })
 }
 
 function parseCookies(header = '') {

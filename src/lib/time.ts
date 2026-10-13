@@ -34,3 +34,10 @@ export function spent(seconds: number): string {
 }
 
 export const clock = (sec: number) => `${num(Math.floor(sec / 60))}:${num(Math.floor(sec % 60)).padStart(2, '٠')}`
+
+/** "٢٤٠ متر" · "٣٫٢ كم" · "١٬٢٠٠ كم" */
+export function dist(meters: number): string {
+  if (meters < 1000) return `${num(Math.max(10, Math.round(meters / 10) * 10))} متر`
+  const km = meters / 1000
+  return `${new Intl.NumberFormat('ar-EG', { maximumFractionDigits: km < 10 ? 1 : 0 }).format(km)} كم`
+}

@@ -36,7 +36,7 @@ export function BottleLists({ mode, onClose, copy }: { mode: Mode | null; onClos
       {items?.length === 0 && <p className="py-10 text-center text-sm text-mist">{active === 'mine' ? copy.sea.noneMine : copy.sea.noneKept}</p>}
       <ul className="space-y-3">
         {items?.map((b) => (
-          <li key={b.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+          <li key={b.id} className="rounded-2xl border border-glass-line bg-glass p-4">
             <div className="mb-2 flex items-center justify-between text-xs text-mist">
               <span>{ago(active === 'kept' ? (b.openedAt ?? b.createdAt) : b.createdAt)}</span>
               {active === 'mine' && (
@@ -51,7 +51,7 @@ export function BottleLists({ mode, onClose, copy }: { mode: Mode | null; onClos
                 {confirm === b.id ? (
                   <button onClick={() => remove(b.id)} className="rounded-full bg-rose/20 px-4 py-1.5 text-xs text-rose-soft">تأكيد الحذف</button>
                 ) : (
-                  <button onClick={() => setConfirm(b.id)} aria-label="حذف" className="rounded-full p-2 text-mist hover:bg-white/10 hover:text-ink"><Trash2 className="h-4 w-4" /></button>
+                  <button onClick={() => setConfirm(b.id)} aria-label="حذف" className="rounded-full p-2 text-mist hover:bg-glass hover:text-ink"><Trash2 className="h-4 w-4" /></button>
                 )}
               </div>
             )}

@@ -4,9 +4,8 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { db, audioDir } from './db.js'
-import { requireMe, partnerOf, names, config } from './auth.js'
+import { requireMe, partnerOf } from './auth.js'
 import { broadcastTo, waitingFor } from './live.js'
-import { pushTo } from './push.js'
 
 export const bottlesRouter = Router()
 bottlesRouter.use(requireMe)
@@ -24,15 +23,9 @@ const shape = (b, { withText = true } = {}) => ({
   audioUrl: b.kind === 'voice' ? `/api/bottles/${b.id}/audio` : null,
 })
 
-function afterThrow(who, bottleId) {
+function afterThrow(who) {
   const p = partnerOf(who)
   broadcastTo(p, { t: 'bottle', waiting: waitingFor(p) })
-  const f = config.genders[who] === 'f'
-  pushTo(p, {
-    title: 'نبضنا',
-    body: `${names()[who]} ${f ? 'رمت' : 'رمى'} لك زجاجة في البحر`,
-    tag: `bottle-${bottleId}`,
-  })
 }
 
 bottlesRouter.post('/', express.json({ limit: '10kb' }), (req, res) => {
@@ -41,7 +34,7 @@ bottlesRouter.post('/', express.json({ limit: '10kb' }), (req, res) => {
   const info = db
     .prepare("INSERT INTO bottles (author, kind, text, createdAt) VALUES (?, 'text', ?, ?)")
     .run(req.who, text, Date.now())
-  afterThrow(req.who, info.lastInsertRowid)
+  afterThrow(req.who)
   res.status(201).json({ id: info.lastInsertRowid })
 })
 
@@ -55,7 +48,7 @@ bottlesRouter.post('/voice', express.raw({ type: () => true, limit: '3mb' }), (r
     .prepare("INSERT INTO bottles (author, kind, text, audioMime, createdAt) VALUES (?, 'voice', ?, ?, ?)")
     .run(req.who, text, mime, Date.now())
   fs.writeFileSync(audioPath(info.lastInsertRowid), req.body)
-  afterThrow(req.who, info.lastInsertRowid)
+  afterThrow(req.who)
   res.status(201).json({ id: info.lastInsertRowid })
 })
 

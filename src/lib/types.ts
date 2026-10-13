@@ -2,11 +2,12 @@ export type Who = 'a' | 'b'
 export type Gender = 'm' | 'f'
 export type PState = 'here' | 'away' | 'gone'
 
+/** Slot A is "her", slot B is "him". Nothing is ever displayed by name. */
+export const GENDERS: Record<Who, Gender> = { a: 'f', b: 'm' }
+
 export interface Profile {
   who: Who
   partner: Who
-  names: Record<Who, string>
-  genders: Record<Who, Gender>
 }
 
 export interface Bottle {
@@ -21,4 +22,11 @@ export interface Bottle {
 export interface Together {
   total: number
   today: number
+}
+
+export interface DistanceInfo {
+  meters: number | null
+  precise: boolean
+  at: { a: number | null; b: number | null }
+  closestToday: number | null
 }

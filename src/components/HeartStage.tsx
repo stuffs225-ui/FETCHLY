@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { HeartShape } from './Heart'
-import type { HeartTone } from './Heart'
-import type { PState, Who } from '@/lib/types'
+import type { DistanceInfo, PState, Who } from '@/lib/types'
 import { vibrate } from '@/lib/prefs'
 import { heartbeatSound } from '@/lib/sound'
 
-const BASE_BPM: Record<Who, number> = { a: 66, b: 77 }
+const BASE_BPM: Record<Who, number> = { a: 76, b: 66 }
 const TOGETHER_BPM = 71.5
-const TONE: Record<Who, HeartTone> = { a: 'warm', b: 'rose' }
 
 const frac = (x: number) => x - Math.floor(x)
 /** "lub-dub": a strong first beat and a softer second one. */
@@ -18,26 +16,32 @@ function pulse(p: number) {
   return Math.exp(-((d1 / 0.055) ** 2)) + 0.55 * Math.exp(-((d2 / 0.06) ** 2))
 }
 
+/** Real distance → gap between the hearts, on a log scale (30 m ≈ touching, 1000 km ≈ far apart). */
+function gapFor(meters: number | null, together: boolean) {
+  if (meters === null) return together ? 78 : 210
+  const t = Math.min(1, Math.max(0, Math.log10(Math.max(meters, 30) / 30) / Math.log10(1_000_000 / 30)))
+  return 26 + t * 210
+}
+
 interface Props {
   me: Who
-  meName: string
-  partnerName: string
   partnerState: PState
   connected: boolean
   serverNow: () => number
   rippleTick: number
   haptics: boolean
   sound: boolean
+  distance: DistanceInfo
   onTouchPartner: () => void
 }
 
 interface Ring { id: number; i: 0 | 1 }
 
 /**
- * Two hearts. Alone they float apart and beat at their own pace; when both are
- * here they drift together, lock onto the server clock and become one beat.
+ * Two hearts. Their gap on screen is the real distance between you. Whenever
+ * you are both here, they lock onto the server clock and beat as one.
  */
-export function HeartStage({ me, meName, partnerName, partnerState, connected, serverNow, rippleTick, haptics, sound, onTouchPartner }: Props) {
+export function HeartStage({ me, partnerState, connected, serverNow, rippleTick, haptics, sound, distance, onTouchPartner }: Props) {
   const together = connected && partnerState === 'here'
   const partner: Who = me === 'a' ? 'b' : 'a'
 
@@ -49,17 +53,12 @@ export function HeartStage({ me, meName, partnerName, partnerState, connected, s
 
   const [rings, setRings] = useState<Ring[]>([])
   const ringSeq = useRef(0)
-  const spawnRing = (i: 0 | 1) => setRings((r) => [...r.slice(-5), { id: ++ringSeq.current, i }])
-  const spawnRef = useRef(spawnRing)
-  spawnRef.current = spawnRing
+  const spawnRef = useRef<(i: 0 | 1) => void>(() => {})
+  spawnRef.current = (i) => setRings((r) => [...r.slice(-4), { id: ++ringSeq.current, i }])
 
-  const [bloom, setBloom] = useState(0)
   const wasTogether = useRef(false)
   useEffect(() => {
-    if (together && !wasTogether.current) {
-      setBloom((b) => b + 1)
-      vibrate([30, 60, 45])
-    }
+    if (together && !wasTogether.current) vibrate([30, 60, 45])
     wasTogether.current = together
   }, [together])
 
@@ -88,17 +87,16 @@ export function HeartStage({ me, meName, partnerName, partnerState, connected, s
 
         if (alive) {
           s.phase[i] += (dt * s.bpm[i]) / 60
-          // Once everything has settled, steer both hearts onto the shared server phase.
+          // Once settled, steer both hearts onto the shared server phase.
           if (L.together && s.excite[i] < 0.02 && Math.abs(s.bpm[i] - TOGETHER_BPM) < 0.8) {
-            let d = frac(t * TOGETHER_BPM / 60) - frac(s.phase[i])
+            let d = frac((t * TOGETHER_BPM) / 60) - frac(s.phase[i])
             d -= Math.round(d)
             s.phase[i] += d * Math.min(1, dt * 2.5)
           }
           const beat = Math.floor(s.phase[i])
           if (beat > s.beats[i]) {
             s.beats[i] = beat
-            const strong = i === 1 || L.together
-            if (strong || i === 0) spawnRef.current(i)
+            spawnRef.current(i)
             if (i === 0) {
               if (L.sound) heartbeatSound()
               if (L.haptics && L.together) vibrate([14, 70, 22])
@@ -108,13 +106,9 @@ export function HeartStage({ me, meName, partnerName, partnerState, connected, s
 
         const f = alive ? pulse(frac(s.phase[i])) : 0
         const el = heartEls.current[i]
-        if (el) el.style.transform = `scale(${1 + 0.14 * f + s.excite[i] * 0.04})`
+        if (el) el.style.transform = `scale(${1 + 0.1 * f + s.excite[i] * 0.04})`
         const glow = glowEls.current[i]
-        if (glow) {
-          const base = !alive ? 0.12 : i === 1 && L.partnerState === 'away' ? 0.3 : 0.45
-          glow.style.opacity = String(base + 0.55 * f)
-          glow.style.transform = `scale(${0.9 + 0.35 * f})`
-        }
+        if (glow) glow.style.opacity = String((!alive ? 0.04 : 0.1) + 0.2 * f)
       }
     }
     raf = requestAnimationFrame(tick)
@@ -132,19 +126,19 @@ export function HeartStage({ me, meName, partnerName, partnerState, connected, s
   const touchPartner = () => {
     if (!connected) return
     sim.current.excite[1] = 1
-    spawnRing(1)
+    spawnRef.current(1)
     vibrate(14)
     onTouchPartner()
   }
 
-  const spring = { type: 'spring' as const, stiffness: 34, damping: 13, mass: 1.2 }
-  const pos = together
-    ? { me: { x: 30, y: 0, scale: 1.18 }, partner: { x: -30, y: 0, scale: 1.18 } }
-    : { me: { x: -62, y: 96, scale: 0.8 }, partner: { x: 62, y: -92, scale: 0.8 } }
-  // RTL: slot "me" sits on the right visually; keep the heart geometry LTR so x offsets read as drawn.
-  const partnerOpacity = partnerState === 'gone' ? 0.34 : partnerState === 'away' ? 0.7 : 1
+  const gap = gapFor(distance.meters, together)
+  const u = { x: 0.55, y: -0.83 }
+  const pos = { me: { x: -u.x * gap * 0.5, y: -u.y * gap * 0.5 }, partner: { x: u.x * gap * 0.5, y: u.y * gap * 0.5 } }
+  const C = { x: 160, y: 200 }
+  const spring = { type: 'spring' as const, stiffness: 28, damping: 14, mass: 1.3 }
+  const partnerOpacity = partnerState === 'gone' ? 0.38 : partnerState === 'away' ? 0.7 : 1
 
-  const heart = (i: 0 | 1, who: Who, name: string) => {
+  const heart = (i: 0 | 1, who: Who) => {
     const target = i === 0 ? pos.me : pos.partner
     return (
       <motion.div
@@ -158,87 +152,55 @@ export function HeartStage({ me, meName, partnerName, partnerState, connected, s
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
           <div
             ref={(el) => { glowEls.current[i] = el }}
-            className="absolute -inset-16 rounded-full"
-            style={{ background: `radial-gradient(closest-side, ${i === 0 ? 'rgba(255,140,120,.55)' : 'rgba(255,100,170,.5)'}, transparent 72%)` }}
+            className="absolute -inset-10 rounded-full"
+            style={{ background: `radial-gradient(closest-side, var(--heart-${who}), transparent 75%)` }}
           />
           {rings.filter((r) => r.i === i).map((r) => (
             <motion.span
               key={r.id}
               className="absolute left-1/2 top-1/2 h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border"
-              style={{ borderColor: i === 0 ? 'rgba(255,170,140,.7)' : 'rgba(255,130,190,.7)' }}
-              initial={{ scale: 0.9, opacity: 0.7 }}
-              animate={{ scale: 2.6, opacity: 0 }}
-              transition={{ duration: 1.9, ease: 'easeOut' }}
+              style={{ borderColor: `var(--heart-${who})` }}
+              initial={{ scale: 0.95, opacity: 0.35 }}
+              animate={{ scale: 2.1, opacity: 0 }}
+              transition={{ duration: 2.2, ease: 'easeOut' }}
               onAnimationComplete={() => setRings((rs) => rs.filter((x) => x.id !== r.id))}
             />
           ))}
-          <div
-            ref={(el) => { heartEls.current[i] = el }}
-            className="relative will-change-transform"
-            style={{ filter: 'drop-shadow(0 6px 22px rgba(255,90,140,.35))' }}
-          >
-            <HeartShape tone={TONE[who]} className="h-[98px] w-[110px]" />
+          <div ref={(el) => { heartEls.current[i] = el }} className="relative will-change-transform" style={{ filter: 'drop-shadow(0 8px 18px rgba(0,0,0,.18))' }}>
+            <HeartShape tone={who} className="h-[88px] w-[98px]" />
           </div>
         </div>
-        <AnimatePresence>
-          {!together && (
-            <motion.span
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute left-1/2 top-[62px] -translate-x-1/2 whitespace-nowrap text-xs font-medium text-mist"
-            >
-              {name}
-            </motion.span>
-          )}
-        </AnimatePresence>
       </motion.div>
     )
   }
 
   return (
     <div className="relative mx-auto h-[400px] w-[320px] select-none" dir="ltr">
-      {/* faint thread between the two hearts */}
       <svg className="absolute inset-0" viewBox="0 0 320 400" fill="none" aria-hidden>
-        <motion.path
-          d="M98 296 C 130 230, 190 170, 222 108"
-          stroke="rgba(255,200,215,.35)"
-          strokeWidth="1.2"
-          strokeDasharray="2 7"
+        <motion.line
+          stroke="var(--mist)"
+          strokeWidth="1"
+          strokeDasharray="1.5 7"
           strokeLinecap="round"
           initial={false}
-          animate={{ opacity: together ? 0 : 0.8 }}
-          transition={{ duration: 1.2 }}
+          animate={{ x1: C.x + pos.me.x, y1: C.y + pos.me.y, x2: C.x + pos.partner.x, y2: C.y + pos.partner.y, opacity: gap > 90 ? 0.55 : 0 }}
+          transition={spring}
         />
       </svg>
 
-      <AnimatePresence>
-        {bloom > 0 && together && (
-          <motion.div
-            key={bloom}
-            className="pointer-events-none absolute left-1/2 top-1/2 h-[360px] w-[360px] -translate-x-1/2 -translate-y-1/2 rounded-full"
-            style={{ background: 'radial-gradient(closest-side, rgba(255,210,225,.65), rgba(255,120,160,.25) 45%, transparent 72%)' }}
-            initial={{ opacity: 0, scale: 0.4 }}
-            animate={{ opacity: [0, 1, 0], scale: [0.4, 1.1, 1.5] }}
-            transition={{ duration: 2.4, ease: 'easeOut' }}
-          />
-        )}
-      </AnimatePresence>
+      {heart(0, me)}
+      {heart(1, partner)}
 
-      {heart(0, me, meName)}
-      {heart(1, partner, partnerName)}
-
-      {/* touch target on the partner's heart */}
       <motion.button
         type="button"
-        aria-label={`المس قلب ${partnerName}`}
+        aria-label="المس قلبه"
         onClick={touchPartner}
-        className="absolute left-1/2 top-1/2 h-[104px] w-[116px] -translate-x-1/2 -translate-y-1/2 rounded-full outline-none"
+        className="absolute left-1/2 top-1/2 h-[100px] w-[110px] -translate-x-1/2 -translate-y-1/2 rounded-full outline-none"
         style={{ zIndex: 3, background: 'transparent' }}
         initial={false}
         animate={{ x: pos.partner.x, y: pos.partner.y }}
         transition={spring}
-        whileTap={{ scale: 0.92 }}
+        whileTap={{ scale: 0.94 }}
       />
     </div>
   )

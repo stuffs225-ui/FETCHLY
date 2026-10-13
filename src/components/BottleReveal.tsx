@@ -34,7 +34,7 @@ export function BottleReveal({ state, copy, onClose, onReply }: { state: RevealS
     <AnimatePresence>
       {state && (
         <motion.div
-          className="fixed inset-0 z-[55] flex items-center justify-center bg-night/80 px-6 backdrop-blur-md"
+          className="fixed inset-0 z-[55] flex items-center justify-center bg-[var(--scrim)] px-6 "
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -45,7 +45,6 @@ export function BottleReveal({ state, copy, onClose, onReply }: { state: RevealS
               transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
               className="relative"
             >
-              <div className="pointer-events-none absolute -inset-10 animate-breathe rounded-full bg-rose/30 blur-3xl" />
               <BottleArt className="relative h-44 w-22" />
             </motion.div>
           )}
@@ -66,8 +65,7 @@ export function BottleReveal({ state, copy, onClose, onReply }: { state: RevealS
               animate={{ scale: 1, opacity: 1, y: 0 }}
               transition={{ type: 'spring', stiffness: 150, damping: 17 }}
             >
-              <div className="pointer-events-none absolute -inset-8 rounded-full bg-rose/20 blur-3xl" />
-              <div className="relative overflow-hidden rounded-[26px] border border-[#f5e4d0]/30 bg-gradient-to-b from-[#fdf3e6] to-[#f4dfc8] p-6 text-[#3b2433] shadow-[0_30px_80px_rgba(0,0,0,.5)]">
+              <div className="relative overflow-hidden rounded-[26px] border border-[#f5e4d0]/30 bg-[#f6ecdd] p-6 text-[#3b2433] shadow-[0_20px_50px_rgba(0,0,0,.25)]">
                 <div className="mb-4 flex items-center justify-between text-[11px] font-medium text-[#9b6b7e]">
                   <span className="rounded-full bg-[#ff7a9c]/15 px-2.5 py-1 text-[#c0407f]">{state.fresh ? copy.sea.fresh : copy.sea.old}</span>
                   <span>{ago(state.bottle.createdAt)}</span>
@@ -97,7 +95,7 @@ export function BottleReveal({ state, copy, onClose, onReply }: { state: RevealS
               </div>
 
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: unrolled ? 1 : 0 }} transition={{ delay: 0.6 }} className="relative mt-5 flex justify-center gap-3">
-                <button onClick={onReply} className="flex items-center gap-2 rounded-full bg-gradient-to-br from-coral to-rose px-6 py-3 text-sm font-bold text-night shadow-[0_10px_34px_rgba(255,107,139,.4)] active:scale-95">
+                <button onClick={onReply} className="flex items-center gap-2 rounded-2xl bg-accent px-6 py-3 text-sm font-bold text-night active:scale-95">
                   <Reply className="h-4 w-4" /> {copy.sea.reply}
                 </button>
                 <button onClick={onClose} aria-label="إغلاق" className="glass flex h-12 w-12 items-center justify-center rounded-full text-ink active:scale-95">

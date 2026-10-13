@@ -36,12 +36,12 @@ export function VoicePlayer({ src }: { src: string }) {
 
   const bars = 28
   return (
-    <div className="flex items-center gap-3 rounded-2xl bg-white/[0.06] px-3 py-2.5">
+    <div className="flex items-center gap-3 rounded-2xl bg-glass px-3 py-2.5">
       <audio ref={audio} src={src} preload="metadata" />
       <button
         onClick={toggle}
         aria-label={playing ? 'إيقاف' : 'تشغيل'}
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-coral to-rose text-night shadow-[0_6px_24px_rgba(255,107,139,.4)] transition-transform active:scale-90"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent text-night transition-transform active:scale-90"
       >
         {playing ? <Pause className="h-5 w-5" fill="currentColor" /> : <Play className="h-5 w-5 translate-x-[-1px]" fill="currentColor" />}
       </button>
@@ -53,7 +53,7 @@ export function VoicePlayer({ src }: { src: string }) {
             <span
               key={i}
               className="w-[3px] rounded-full transition-colors duration-200"
-              style={{ height: `${h}%`, background: done ? '#ff8fae' : 'rgba(255,255,255,.28)', transform: playing && done ? `scaleY(${0.8 + ((i * 7) % 5) / 10})` : undefined }}
+              style={{ height: `${h}%`, background: done ? 'var(--accent)' : 'color-mix(in srgb, var(--mist) 45%, transparent)', transform: playing && done ? `scaleY(${0.8 + ((i * 7) % 5) / 10})` : undefined }}
             />
           )
         })}

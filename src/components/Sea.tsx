@@ -28,9 +28,9 @@ function Waves() {
   return (
     <div dir="ltr" className="pointer-events-none absolute inset-x-0 bottom-0 h-[42%] overflow-hidden" aria-hidden>
       {[
-        { cls: 'animate-wave-slow opacity-60', top: '0%', fill: '#2c1f55', w: '200%' },
-        { cls: 'animate-wave opacity-80', top: '14%', fill: '#231646', w: '200%' },
-        { cls: 'animate-wave-slow opacity-95', top: '30%', fill: '#171030', w: '200%' },
+        { cls: 'animate-wave-slow opacity-60', top: '0%', fill: 'var(--sea-3)', w: '200%' },
+        { cls: 'animate-wave opacity-80', top: '14%', fill: 'var(--sea-2)', w: '200%' },
+        { cls: 'animate-wave-slow opacity-95', top: '30%', fill: 'var(--sea-1)', w: '200%' },
       ].map((l, i) => (
         <svg key={i} viewBox="0 0 1800 200" preserveAspectRatio="none" className={`absolute left-0 h-full ${l.cls}`} style={{ top: l.top, width: l.w }}>
           <path d={wave} fill={l.fill} />
@@ -77,7 +77,7 @@ export function Sea({ waiting, copy, onWaiting, active }: { waiting: number; cop
     <div className="relative flex h-full flex-col items-center">
       <div className="relative w-full flex-1 overflow-hidden">
         {/* moon */}
-        <div className="absolute end-[12%] top-[3%] h-12 w-12 rounded-full bg-[radial-gradient(circle_at_35%_35%,#fff8ee,#f4d3b5_60%,#e7b99a)] shadow-[0_0_80px_20px_rgba(244,211,181,.25)]" />
+        <div className="absolute end-[12%] top-[3%] h-12 w-12 rounded-full bg-[#ead9c3] opacity-90" />
 
         <div className="absolute inset-x-0 top-[17%] px-6 text-center">
           {waiting > 0 ? (
@@ -136,7 +136,7 @@ export function Sea({ waiting, copy, onWaiting, active }: { waiting: number; cop
         <div className="flex gap-3">
           <button
             onClick={draw}
-            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-br from-coral to-rose py-4 text-base font-bold text-night shadow-[0_12px_40px_rgba(255,107,139,.4)] transition-transform active:scale-[0.97]"
+            className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-accent py-4 text-base font-bold text-night transition-transform active:scale-[0.97]"
           >
             <Sparkles className="h-4.5 w-4.5" /> {copy.sea.open}
           </button>
