@@ -4,7 +4,6 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { handle } from './handler.js'
-import { config } from './auth.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const distDir = path.join(__dirname, '../dist')
@@ -31,14 +30,6 @@ function serveStatic(req, res) {
 
 http
   .createServer((req, res) => (req.url.startsWith('/api') ? handle(req, res) : serveStatic(req, res)))
-  .listen(port, async () => {
+  .listen(port, () => {
     console.log(`[server] نبضنا listening on http://localhost:${port}`)
-    try {
-      const { tokens } = await config()
-      console.log('[links] Private links (also shown on the home page until the first password is chosen):')
-      console.log(`        A (her): http://localhost:${port}/?k=${tokens.a}`)
-      console.log(`        B (him): http://localhost:${port}/?k=${tokens.b}`)
-    } catch (e) {
-      console.log('[server] database not ready:', e.message)
-    }
   })

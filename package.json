@@ -10,7 +10,6 @@
     "server": "node server/index.js",
     "server:dev": "node --watch server/index.js",
     "start": "npm run build && node server/index.js",
-    "links": "node server/cli.js links",
     "reset-password": "node server/cli.js reset"
   },
   "dependencies": {

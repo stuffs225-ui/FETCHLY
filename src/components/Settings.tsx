@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { MapPin, MapPinOff, Smartphone, Volume2, Check } from 'lucide-react'
 import { Sheet } from './Sheet'
-import { LinkCard } from './LinkCard'
 import { api } from '@/lib/api'
+import { GENDERS } from '@/lib/types'
 import type { Who } from '@/lib/types'
 import { THEMES } from '@/lib/theme'
 import type { ThemeKey } from '@/lib/theme'
@@ -38,11 +38,15 @@ interface Props {
 
 export function Settings({ open, onClose, haptics, setHaptics, sound, setSound, theme, setTheme, loc, partner }: Props) {
   const locOn = loc.status === 'on'
-  const [partnerKey, setPartnerKey] = useState<string | null>(null)
-  const [base, setBase] = useState<string | null>(null)
-  useEffect(() => {
-    if (open) api.get<{ key: string; base: string | null }>('/partner-link').then((r) => { setPartnerKey(r.key); setBase(r.base) }).catch(() => {})
-  }, [open])
+  const [confirmReset, setConfirmReset] = useState(false)
+  const [done, setDone] = useState(false)
+  const her = GENDERS[partner] === 'f'
+  const resetPartner = async () => {
+    await api.post('/reset-partner').catch(() => {})
+    setConfirmReset(false)
+    setDone(true)
+    setTimeout(() => setDone(false), 4000)
+  }
   return (
     <Sheet open={open} onClose={onClose} title="الإعدادات">
       <div className="space-y-3">
@@ -72,8 +76,22 @@ export function Settings({ open, onClose, haptics, setHaptics, sound, setSound, 
           />
         )}
         <Toggle on={haptics} onChange={setHaptics} label="اهتزاز مع كل نبضة عندما تكونان معًا" icon={<Smartphone className="h-5 w-5" />} />
-        {partnerKey && <LinkCard receiver={partner} keyValue={partnerKey} base={base} title={partner === 'a' ? 'إعادة إرسال رابطها' : 'إعادة إرسال رابطه'} />}
         <Toggle on={sound} onChange={(v) => { if (v) void import('@/lib/sound').then((m) => m.unlockSound()); setSound(v) }} label="صوت نبض القلب" hint="هادئ ومنخفض" icon={<Volume2 className="h-5 w-5" />} />
+
+        <div className="rounded-2xl border border-glass-line bg-glass p-4">
+          <p className="text-[15px] font-medium text-ink">{her ? 'نسيَت رمزها؟' : 'نسي رمزه؟'}</p>
+          <p className="mt-1 text-xs leading-6 text-mist">{her ? 'امسح رمزها لتختار رمزًا جديدًا عند دخولها القادم.' : 'امسح رمزه ليختار رمزًا جديدًا عند دخوله القادم.'}</p>
+          {done ? (
+            <p className="mt-3 text-sm text-accent-soft">تم. {her ? 'ستختار رمزًا جديدًا عند دخولها' : 'سيختار رمزًا جديدًا عند دخوله'}.</p>
+          ) : confirmReset ? (
+            <div className="mt-3 flex gap-2">
+              <button onClick={resetPartner} className="flex-1 rounded-xl bg-accent py-2.5 text-sm font-bold text-on-accent active:scale-95">نعم، امسحه</button>
+              <button onClick={() => setConfirmReset(false)} className="flex-1 rounded-xl border border-glass-line py-2.5 text-sm text-ink active:scale-95">إلغاء</button>
+            </div>
+          ) : (
+            <button onClick={() => setConfirmReset(true)} className="mt-3 rounded-xl border border-glass-line px-4 py-2.5 text-sm text-ink active:scale-95">{her ? 'مسح رمزها' : 'مسح رمزه'}</button>
+          )}
+        </div>
       </div>
     </Sheet>
   )

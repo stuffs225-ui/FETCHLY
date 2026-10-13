@@ -1,7 +1,7 @@
 import crypto from 'node:crypto'
 import { q, getSetting, setSetting, dayKey, addTogether, togetherStats, NoDatabaseError, DatabaseUnavailableError, SchemaMissingError, SETUP_SQL } from './db.js'
 import {
-  config, whoForToken, hasPassword, anyPasswordSet, setPassword, checkPassword, issueCookie, whoFromRequest, partnerOf, tooManyAttempts,
+  WHO, hasPassword, slotsState, setPassword, checkPassword, resetPassword, issueCookie, whoFromRequest, partnerOf, tooManyAttempts, isLocked, noteFailure,
 } from './auth.js'
 import { send, readJson, readBinary } from './http.js'
 
@@ -11,12 +11,6 @@ const MAX_TEXT = 600
 const AUDIO_TYPES = new Set(['audio/webm', 'audio/mp4', 'audio/ogg', 'audio/mpeg', 'audio/aac', 'audio/x-m4a'])
 
 const profile = (who) => ({ who, partner: partnerOf(who) })
-
-/** On Vercel's production deployment, links should always use the public production address. */
-function publicBase() {
-  const host = process.env.VERCEL_ENV === 'production' ? process.env.VERCEL_PROJECT_PRODUCTION_URL : null
-  return host ? `https://${host}` : null
-}
 
 // ---------------------------------------------------------------- presence
 
@@ -235,23 +229,28 @@ async function audio(req, res, who, id) {
 
 // ---------------------------------------------------------------- router
 
-async function join(req, res, url) {
-  const ip = String(req.headers['x-forwarded-for'] ?? req.socket?.remoteAddress ?? 'x').split(',')[0].trim()
-  if (await tooManyAttempts(`join:${ip}`, 25, 15 * 60 * 1000)) return send(res, 429, { error: 'too_many_attempts' })
+const LOCK_MAX = 8
+const LOCK_WINDOW = 15 * 60 * 1000
 
-  if (req.method === 'GET') {
-    const who = await whoForToken(url.searchParams.get('k'))
-    if (!who) return send(res, 404, { error: 'invalid_link' })
-    return send(res, 200, { who, needsPassword: !(await hasPassword(who)) })
-  }
-  const { k, password } = await readJson(req)
-  const who = await whoForToken(k)
-  if (!who || typeof password !== 'string') return send(res, 404, { error: 'invalid_link' })
+// One door for both of them. Each picks who they are and sets their own code the first time; afterwards the code is required.
+async function join(req, res) {
+  const ip = String(req.headers['x-forwarded-for'] ?? req.socket?.remoteAddress ?? 'x').split(',')[0].trim()
+  if (await tooManyAttempts(`join:${ip}`, 40, LOCK_WINDOW)) return send(res, 429, { error: 'too_many_attempts' })
+
+  if (req.method === 'GET') return send(res, 200, await slotsState())
+
+  const { who, password } = await readJson(req)
+  if (!WHO.includes(who) || typeof password !== 'string') return send(res, 400, { error: 'bad_request' })
+
   if (!(await hasPassword(who))) {
     if (password.length < 4 || password.length > 100) return send(res, 400, { error: 'weak_password' })
     await setPassword(who, password)
-  } else if (!(await checkPassword(who, password))) {
-    return send(res, 401, { error: 'wrong' })
+  } else {
+    if (await isLocked(`fail:${who}`, LOCK_MAX, LOCK_WINDOW)) return send(res, 429, { error: 'too_many_attempts' })
+    if (!(await checkPassword(who, password))) {
+      await noteFailure(`fail:${who}`, LOCK_WINDOW)
+      return send(res, 401, { error: 'wrong' })
+    }
   }
   await issueCookie(req, res, who)
   send(res, 200, profile(who))
@@ -277,12 +276,7 @@ export async function handle(req, res) {
     const m = req.method
 
     // Public
-    if (path === '/api/join' && (m === 'GET' || m === 'POST')) return await join(req, res, url)
-    if (path === '/api/setup' && m === 'GET') {
-      // First run only: until someone has chosen a password the home page can show both private links.
-      if (await anyPasswordSet()) return send(res, 404, { error: 'done' })
-      return send(res, 200, { links: (await config()).tokens, base: publicBase() })
-    }
+    if (path === '/api/join' && (m === 'GET' || m === 'POST')) return await join(req, res)
 
     const who = await whoFromRequest(req)
     if (!who) return send(res, 401, { error: 'unauthorized' })
@@ -290,7 +284,8 @@ export async function handle(req, res) {
     if (path === '/api/me' && m === 'GET') return send(res, 200, profile(who))
     if (path === '/api/sync' && m === 'POST') return await sync(req, res, who)
     if (path === '/api/ripple' && m === 'POST') { await pushEvent(partnerOf(who), 'ripple'); return send(res, 204) }
-    if (path === '/api/partner-link' && m === 'GET') return send(res, 200, { key: (await config()).tokens[partnerOf(who)], base: publicBase() })
+    // If one of them forgets their code, the other can clear it so it can be chosen again.
+    if (path === '/api/reset-partner' && m === 'POST') { await resetPassword(partnerOf(who)); return send(res, 204) }
     if (path === '/api/location' && m === 'PUT') return await putLocation(req, res, who)
     if (path === '/api/location' && m === 'DELETE') return await deleteLocation(req, res, who)
 

@@ -10,28 +10,15 @@ export const WHO = ['a', 'b']
 export const partnerOf = (who) => (who === 'a' ? 'b' : 'a')
 
 let cfg = null
-/** Secrets are created once in the database; env vars can override them. */
+/** The cookie-signing secret is created once in the database (an env var can override it). */
 export async function config() {
   if (cfg) return cfg
-  const [cookieSecret, a, b] = await Promise.all([persistentSecret('cookieSecret'), persistentSecret('linkTokenA', 18), persistentSecret('linkTokenB', 18)])
-  cfg = {
-    cookieSecret: process.env.SESSION_SECRET || cookieSecret,
-    tokens: { a: process.env.LINK_TOKEN_A || a, b: process.env.LINK_TOKEN_B || b },
-  }
+  cfg = { cookieSecret: process.env.SESSION_SECRET || (await persistentSecret('cookieSecret')) }
   return cfg
 }
 
 const sha = (v) => crypto.createHash('sha256').update(String(v)).digest()
 export const safeEqual = (a, b) => crypto.timingSafeEqual(sha(a), sha(b))
-
-export async function whoForToken(token) {
-  if (typeof token !== 'string' || token.length < 8) return null
-  const { tokens } = await config()
-  // Compare against both so timing never reveals which one was close.
-  const a = safeEqual(token, tokens.a)
-  const b = safeEqual(token, tokens.b)
-  return a ? 'a' : b ? 'b' : null
-}
 
 const hashPassword = (password, salt) => crypto.scryptSync(password, salt, 32).toString('hex')
 
@@ -40,8 +27,10 @@ export async function hasPassword(who) {
   return Boolean(r[0]?.pass_hash)
 }
 
-export async function anyPasswordSet() {
-  return (await q('SELECT 1 FROM nb_slots WHERE pass_hash IS NOT NULL LIMIT 1')).length > 0
+export async function slotsState() {
+  const rows = await q('SELECT who FROM nb_slots WHERE pass_hash IS NOT NULL')
+  const set = new Set(rows.map((r) => r.who))
+  return { a: set.has('a'), b: set.has('b') }
 }
 
 export async function setPassword(who, password) {
@@ -97,4 +86,14 @@ export async function tooManyAttempts(key, max, windowMs) {
     [key, now, windowMs],
   )
   return r[0].count > max
+}
+
+/** Failed code attempts per person: after too many, that slot is locked for a while. */
+export async function isLocked(key, max, windowMs) {
+  const r = (await q('SELECT count, since FROM nb_attempts WHERE key = $1', [key]))[0]
+  return Boolean(r) && Date.now() - r.since <= windowMs && r.count >= max
+}
+
+export async function noteFailure(key, windowMs) {
+  await tooManyAttempts(key, Number.MAX_SAFE_INTEGER, windowMs)
 }
