@@ -117,55 +117,116 @@ async function deleteLocation(_req, res, who) {
 
 // ---------------------------------------------------------------- bottles
 
+const MOODS = new Set(['miss', 'thanks', 'sorry', 'laugh', 'calm'])
+const MAX_PHOTO_B64 = 480_000
+
+const parseJson = (raw) => {
+  try {
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
 const shape = (b) => ({
   id: b.id,
+  author: b.author,
   kind: b.kind,
   text: b.body,
+  mood: b.mood ?? null,
   createdAt: b.created_at,
   openedAt: b.opened_at,
+  arriveAt: b.arrive_at ?? null,
+  unlockAt: b.unlock_at ?? null,
+  stampMin: b.stamp_min ?? null,
+  stampDist: b.stamp_dist ?? null,
+  song: parseJson(b.song_json),
   audioUrl: b.kind === 'voice' ? `/api/bottles/${b.id}/audio` : null,
+  photoUrl: b.has_photo ? `/api/bottles/${b.id}/photo` : null,
 })
-const LIST = 'id, author, kind, body, created_at, opened_at'
+const LIST = 'id, author, kind, body, created_at, opened_at, mood, arrive_at, unlock_at, stamp_min, stamp_dist, song_json, (photo_b64 IS NOT NULL) AS has_photo'
+const AVAILABLE = '(arrive_at IS NULL OR arrive_at <= $2) AND (unlock_at IS NULL OR unlock_at <= $2)'
+
+/** Mood, delivery (now / drifting for a while / locked until a date), moment stamp and an optional attached song. */
+async function ritualFields(opts, now) {
+  const mood = MOODS.has(opts.mood) ? opts.mood : null
+  let arrive = null
+  let unlock = null
+  if (opts.mode === 'drift') arrive = now + 5 * 60_000 + crypto.randomInt(0, 6 * 3600_000 - 5 * 60_000)
+  else if (opts.mode === 'at') {
+    const at = Number(opts.at)
+    if (Number.isFinite(at) && at > now + 60_000 && at < now + 366 * 86_400_000) unlock = Math.round(at)
+  }
+  let stampMin = null
+  let stampDist = null
+  if (opts.stamp) {
+    const m = Number(opts.stampMin)
+    stampMin = Number.isInteger(m) && m >= 0 && m < 1440 ? m : null
+    if (stampMin !== null) stampDist = readDistance(await getSetting('distance')).meters
+  }
+  let song = null
+  const sid = Number(opts.songId)
+  if (Number.isInteger(sid) && sid > 0) {
+    const r = (await q('SELECT * FROM nb_songs WHERE id = $1', [sid]))[0]
+    if (r) song = JSON.stringify({ platform: r.platform, ytId: r.yt_id, url: r.url ?? `https://www.youtube.com/watch?v=${r.yt_id}`, title: r.title, thumb: r.thumb, embed: r.embed, start: r.start_sec })
+  }
+  return { mood, arrive, unlock, stampMin, stampDist, song }
+}
+
+const INSERT = `INSERT INTO nb_bottles (author, kind, body, audio_mime, audio_b64, photo_b64, mood, arrive_at, unlock_at, stamp_min, stamp_dist, song_json, created_at)
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id, arrive_at, unlock_at`
 
 async function throwText(req, res, who) {
-  const text = String((await readJson(req)).text ?? '').trim().slice(0, MAX_TEXT)
-  if (!text) return send(res, 400, { error: 'empty' })
-  const r = await q("INSERT INTO nb_bottles (author, kind, body, created_at) VALUES ($1, 'text', $2, $3) RETURNING id", [who, text, Date.now()])
-  send(res, 201, { id: r[0].id })
+  const body = await readJson(req, 700_000)
+  const text = String(body.text ?? '').trim().slice(0, MAX_TEXT)
+  let photo = null
+  if (typeof body.photo === 'string' && body.photo) {
+    if (body.photo.length > MAX_PHOTO_B64 || !Buffer.from(body.photo.slice(0, 16), 'base64').toString('hex').startsWith('ffd8ff')) return send(res, 400, { error: 'bad_photo' })
+    photo = body.photo
+  }
+  if (!text && !photo) return send(res, 400, { error: 'empty' })
+  const now = Date.now()
+  const f = await ritualFields({ mood: body.mood, mode: body.delivery?.mode, at: body.delivery?.at, stamp: body.stamp?.on, stampMin: body.stamp?.min, songId: body.songId }, now)
+  const r = await q(INSERT, [who, 'text', text || null, null, null, photo, f.mood, f.arrive, f.unlock, f.stampMin, f.stampDist, f.song, now])
+  send(res, 201, { id: r[0].id, arriveAt: r[0].arrive_at, unlockAt: r[0].unlock_at })
 }
 
 async function throwVoice(req, res, who, url) {
   const mime = String(req.headers['x-audio-type'] ?? '').split(';')[0].trim().toLowerCase()
   const buf = await readBinary(req, 1_500_000)
   if (!AUDIO_TYPES.has(mime) || !buf || buf.length < 500) return send(res, 400, { error: 'bad_audio' })
-  const text = (url.searchParams.get('text') ?? '').trim().slice(0, MAX_TEXT) || null
-  const r = await q(
-    "INSERT INTO nb_bottles (author, kind, body, audio_mime, audio_b64, created_at) VALUES ($1, 'voice', $2, $3, $4, $5) RETURNING id",
-    [who, text, mime, buf.toString('base64'), Date.now()],
-  )
-  send(res, 201, { id: r[0].id })
+  const g = (k) => url.searchParams.get(k)
+  const text = (g('text') ?? '').trim().slice(0, MAX_TEXT) || null
+  const now = Date.now()
+  const f = await ritualFields({ mood: g('mood'), mode: g('mode'), at: g('at'), stamp: g('stamp') === '1', stampMin: g('stampMin'), songId: g('songId') }, now)
+  const r = await q(INSERT, [who, 'voice', text, mime, buf.toString('base64'), null, f.mood, f.arrive, f.unlock, f.stampMin, f.stampDist, f.song, now])
+  send(res, 201, { id: r[0].id, arriveAt: r[0].arrive_at, unlockAt: r[0].unlock_at })
 }
 
-async function waitingFor(who) {
-  return (await q('SELECT COUNT(*)::int AS n FROM nb_bottles WHERE author = $1 AND opened_at IS NULL', [partnerOf(who)]))[0].n
+async function waitingFor(who, now = Date.now()) {
+  return (await q(`SELECT COUNT(*)::int AS n FROM nb_bottles WHERE author = $1 AND opened_at IS NULL AND ${AVAILABLE}`, [partnerOf(who), now]))[0].n
 }
 
 /**
  * The heart of the "pure chance" idea: the draw happens on the server with a
  * CSPRNG so neither of them can influence or predict it. Unread bottles are
- * favoured (3:1) but an old one can always float back.
+ * favoured (3:1) but an old one can always float back. Bottles still travelling
+ * or locked until a date are not part of the draw.
  */
 async function draw(_req, res, who) {
-  const all = await q(`SELECT ${LIST} FROM nb_bottles WHERE author = $1`, [partnerOf(who)])
-  if (all.length === 0) return send(res, 200, { empty: true })
+  const now = Date.now()
+  const all = await q(`SELECT ${LIST} FROM nb_bottles WHERE author = $1 AND ${AVAILABLE}`, [partnerOf(who), now])
+  if (all.length === 0) {
+    const next = (await q('SELECT MIN(unlock_at) AS t FROM nb_bottles WHERE author = $1 AND opened_at IS NULL AND unlock_at > $2', [partnerOf(who), now]))[0]?.t ?? null
+    return send(res, 200, { empty: true, lockedUntil: next })
+  }
   const unread = all.filter((b) => b.opened_at === null)
   const pool = unread.length > 0 ? [...unread, ...unread, ...unread, ...all] : all
   const picked = pool[crypto.randomInt(pool.length)]
   const fresh = picked.opened_at === null
-  const now = Date.now()
   await q('UPDATE nb_bottles SET opened_at = COALESCE(opened_at, $1), opened_count = opened_count + 1 WHERE id = $2', [now, picked.id])
   if (fresh) await pushEvent(partnerOf(who), 'opened')
-  send(res, 200, { bottle: shape({ ...picked, opened_at: picked.opened_at ?? now }), fresh, waiting: await waitingFor(who) })
+  send(res, 200, { bottle: shape({ ...picked, opened_at: picked.opened_at ?? now }), fresh, waiting: await waitingFor(who, now) })
 }
 
 async function listMine(_req, res, who) {
@@ -178,10 +239,44 @@ async function listKept(_req, res, who) {
   send(res, 200, rows.map(shape))
 }
 
+/** Everything the sea scene draws: what is floating towards me (no contents), what I sent, and the stars (bottles I kept). */
+async function seaSummary(_req, res, who) {
+  const now = Date.now()
+  const p = partnerOf(who)
+  const rows = await q('SELECT id, author, mood, arrive_at, unlock_at, opened_at, created_at FROM nb_bottles ORDER BY id')
+  const arrived = (r) => !r.arrive_at || r.arrive_at <= now
+  const inbound = rows.filter((r) => r.author === p && !r.opened_at && arrived(r) && (!r.unlock_at || r.unlock_at <= now))
+  const locked = rows.filter((r) => r.author === p && !r.opened_at && arrived(r) && r.unlock_at && r.unlock_at > now)
+  const mine = rows.filter((r) => r.author === who)
+  const kept = await q(`SELECT ${LIST} FROM nb_bottles WHERE author = $1 AND opened_at IS NOT NULL ORDER BY opened_at DESC LIMIT 120`, [p])
+  send(res, 200, {
+    inbound: inbound.slice(0, 8).map((r) => ({ id: r.id, mood: r.mood ?? null, author: r.author })),
+    waiting: inbound.length,
+    locked: locked.map((r) => ({ id: r.id, mood: r.mood ?? null, unlockAt: r.unlock_at })),
+    sailing: mine.filter((r) => r.arrive_at && r.arrive_at > now).map((r) => ({ id: r.id, mood: r.mood ?? null, arriveAt: r.arrive_at })),
+    lanterns: mine.filter((r) => r.opened_at && now - r.opened_at < 24 * 3600_000).length,
+    lastAt: rows.reduce((m, r) => Math.max(m, r.created_at, r.opened_at ?? 0), 0) || null,
+    kept: kept.map(shape),
+  })
+}
+
 async function removeBottle(_req, res, who, id) {
   const r = await q('DELETE FROM nb_bottles WHERE id = $1 AND author = $2 RETURNING id', [id, who])
   if (!r.length) return send(res, 404, { error: 'not_found' })
   send(res, 204)
+}
+
+// A photo can't be peeked at before its recipient has opened the bottle either.
+async function photo(_req, res, who, id) {
+  const r = (await q('SELECT author, photo_b64, opened_at FROM nb_bottles WHERE id = $1 AND photo_b64 IS NOT NULL', [id]))[0]
+  if (!r) return send(res, 404, { error: 'not_found' })
+  if (r.author !== who && r.opened_at === null) return send(res, 403, { error: 'forbidden' })
+  const buf = Buffer.from(r.photo_b64, 'base64')
+  res.statusCode = 200
+  res.setHeader('Content-Type', 'image/jpeg')
+  res.setHeader('Cache-Control', 'private, max-age=86400')
+  res.setHeader('Content-Length', buf.length)
+  res.end(buf)
 }
 
 // A voice note can't be peeked at before its recipient has drawn the bottle. Supports Range for Safari.
@@ -525,8 +620,10 @@ export async function handle(req, res) {
     if (path === '/api/bottles/draw' && m === 'POST') return await draw(req, res, who)
     if (path === '/api/bottles/mine' && m === 'GET') return await listMine(req, res, who)
     if (path === '/api/bottles/kept' && m === 'GET') return await listKept(req, res, who)
-    const bm = /^\/api\/bottles\/(\d+)(\/audio)?$/.exec(path)
-    if (bm && bm[2] && m === 'GET') return await audio(req, res, who, Number(bm[1]))
+    if (path === '/api/bottles/sea' && m === 'GET') return await seaSummary(req, res, who)
+    const bm = /^\/api\/bottles\/(\d+)(\/audio|\/photo)?$/.exec(path)
+    if (bm && bm[2] === '/audio' && m === 'GET') return await audio(req, res, who, Number(bm[1]))
+    if (bm && bm[2] === '/photo' && m === 'GET') return await photo(req, res, who, Number(bm[1]))
     if (bm && !bm[2] && m === 'DELETE') return await removeBottle(req, res, who, Number(bm[1]))
 
     send(res, 404, { error: 'not_found' })

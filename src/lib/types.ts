@@ -12,13 +12,47 @@ export interface Profile {
   invite?: string
 }
 
+export type Mood = 'miss' | 'thanks' | 'sorry' | 'laugh' | 'calm'
+
+export interface BottleSong {
+  platform: Platform
+  ytId: string
+  url: string
+  title: string
+  thumb: string | null
+  embed: boolean
+  start: number
+}
+
 export interface Bottle {
   id: number
+  author: Who
   kind: 'text' | 'voice'
   text: string | null
+  mood: Mood | null
   createdAt: number
   openedAt: number | null
+  /** The bottle is still travelling until this moment. */
+  arriveAt: number | null
+  /** The bottle cannot be opened before this moment. */
+  unlockAt: number | null
+  /** Minutes since midnight (author's clock) and the distance between them when it was written. */
+  stampMin: number | null
+  stampDist: number | null
+  song: BottleSong | null
   audioUrl: string | null
+  photoUrl: string | null
+}
+
+/** What the sea scene draws. Contents of unopened bottles are never included. */
+export interface SeaSummary {
+  inbound: { id: number; mood: Mood | null; author: Who }[]
+  waiting: number
+  locked: { id: number; mood: Mood | null; unlockAt: number }[]
+  sailing: { id: number; mood: Mood | null; arriveAt: number }[]
+  lanterns: number
+  lastAt: number | null
+  kept: Bottle[]
 }
 
 export interface Together {

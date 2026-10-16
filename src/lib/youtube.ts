@@ -63,3 +63,10 @@ export function formatTime(sec: number): string {
   const s = Math.max(0, Math.floor(sec))
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 }
+
+/** The official embed URL for a shared link (used where we do not need the full player API). */
+export function embedSrc(s: { platform: 'youtube' | 'instagram' | 'tiktok'; ytId: string; url: string; start?: number }, autoplay = true): string {
+  if (s.platform === 'youtube') return `https://www.youtube-nocookie.com/embed/${s.ytId}?playsinline=1&rel=0&modestbranding=1&autoplay=${autoplay ? 1 : 0}${s.start ? `&start=${s.start}` : ''}`
+  if (s.platform === 'tiktok') return `https://www.tiktok.com/player/v1/${s.ytId}?autoplay=${autoplay ? 1 : 0}&music_info=1&description=1`
+  return `${s.url.replace(/\/$/, '')}/embed/`
+}

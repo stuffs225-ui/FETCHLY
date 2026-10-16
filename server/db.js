@@ -41,6 +41,14 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS nb_bottles (
      id SERIAL PRIMARY KEY, author TEXT NOT NULL, kind TEXT NOT NULL, body TEXT, audio_mime TEXT, audio_b64 TEXT,
      created_at DOUBLE PRECISION NOT NULL, opened_at DOUBLE PRECISION, opened_count INTEGER NOT NULL DEFAULT 0)`,
+  // Bottle ritual (schema version 4): mood, journey / time-lock, moment stamp, photo, attached song.
+  `ALTER TABLE nb_bottles ADD COLUMN IF NOT EXISTS mood TEXT`,
+  `ALTER TABLE nb_bottles ADD COLUMN IF NOT EXISTS arrive_at DOUBLE PRECISION`,
+  `ALTER TABLE nb_bottles ADD COLUMN IF NOT EXISTS unlock_at DOUBLE PRECISION`,
+  `ALTER TABLE nb_bottles ADD COLUMN IF NOT EXISTS stamp_min INTEGER`,
+  `ALTER TABLE nb_bottles ADD COLUMN IF NOT EXISTS stamp_dist DOUBLE PRECISION`,
+  `ALTER TABLE nb_bottles ADD COLUMN IF NOT EXISTS photo_b64 TEXT`,
+  `ALTER TABLE nb_bottles ADD COLUMN IF NOT EXISTS song_json TEXT`,
   `CREATE TABLE IF NOT EXISTS nb_songs (
      id SERIAL PRIMARY KEY, author TEXT NOT NULL, yt_id TEXT NOT NULL, title TEXT NOT NULL, channel TEXT, note TEXT,
      start_sec INTEGER NOT NULL DEFAULT 0, reaction TEXT, created_at DOUBLE PRECISION NOT NULL)`,
@@ -58,7 +66,7 @@ const SCHEMA = [
 const TABLES = ['nb_settings', 'nb_slots', 'nb_presence', 'nb_locations', 'nb_together', 'nb_bottles', 'nb_songs', 'nb_events', 'nb_attempts']
 
 /** Bump when the schema/functions change so the one-time setup SQL is offered again. */
-export const SCHEMA_VERSION = '3'
+export const SCHEMA_VERSION = '4'
 const RLS_SQL = TABLES.map((t) => `ALTER TABLE ${t} ENABLE ROW LEVEL SECURITY;`)
 
 // One round trip per poll: presence, together-time, events, counts and shared state all come back in a single call.
@@ -102,7 +110,9 @@ begin
   delete from nb_events where created < p_now - 259200000;
   delete from nb_attempts where since < p_now - 86400000;
 
-  select count(*)::int into v_waiting from nb_bottles where author = v_partner and opened_at is null;
+  select count(*)::int into v_waiting from nb_bottles
+    where author = v_partner and opened_at is null
+      and (arrive_at is null or arrive_at <= p_now) and (unlock_at is null or unlock_at <= p_now);
   select coalesce(sum(seconds), 0) into v_total from nb_together;
   select coalesce((select seconds from nb_together where day = v_day), 0) into v_today;
   select jsonb_build_object('n', count(*), 'lastId', coalesce(max(id), 0),

@@ -28,8 +28,8 @@ export async function readBody(req, limit = 1_600_000) {
   return Buffer.concat(chunks)
 }
 
-export async function readJson(req) {
-  const b = await readBody(req, 20_000)
+export async function readJson(req, limit = 20_000) {
+  const b = await readBody(req, limit)
   if (Buffer.isBuffer(b) || typeof b === 'string') {
     try {
       return JSON.parse(b.toString() || '{}')

@@ -60,6 +60,7 @@ function Home({ profile, onTogether }: { profile: Profile; onTogether: (v: boole
   const [forcedFor, setForcedFor] = useState<number | null>(null)
   const [settings, setSettings] = useState(false)
   const [rippleTick, setRippleTick] = useState(0)
+  const [openedTick, setOpenedTick] = useState(0)
   const [sound, setSound] = usePref('nabd_sound', false)
   const [chimeOn, setChimeOn] = usePref('nabd_chime', false)
   const [theme, setTheme] = useTheme()
@@ -72,7 +73,7 @@ function Home({ profile, onTogether }: { profile: Profile; onTogether: (v: boole
   })
   const { state, serverNow, sendRipple, setWaiting } = useLive({
     onRipple: () => { setRippleTick((t) => t + 1); setFlash((f) => f + 1); if (chimeRef.current) chime(); toast(copy.toast.touched) },
-    onOpened: () => toast(copy.toast.opened),
+    onOpened: () => { setOpenedTick((n) => n + 1); toast(copy.toast.opened) },
     onNewBottle: () => { if (chimeRef.current) chime(); toast(copy.toast.newBottle) },
     onNewSong: (info) => { if (info.lastAuthor !== profile.who) { if (chimeRef.current) chime(); toast(copy.toast.newSong) } },
     onPartnerState: (next, prev) => {
@@ -236,7 +237,7 @@ function Home({ profile, onTogether }: { profile: Profile; onTogether: (v: boole
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             >
-              <Sea waiting={state.waiting} copy={copy} onWaiting={setWaiting} active={shownTab === 'sea'} />
+              <Sea me={profile.who} waiting={state.waiting} copy={copy} onWaiting={setWaiting} active={shownTab === 'sea'} fxTick={openedTick} />
             </motion.section>
           )}
         </AnimatePresence>
