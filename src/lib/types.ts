@@ -33,9 +33,19 @@ export interface DistanceInfo {
   closestToday: number | null
 }
 
+export type Platform = 'youtube' | 'instagram' | 'tiktok'
+
+export const PLATFORM_NAME: Record<Platform, string> = { youtube: 'يوتيوب', instagram: 'إنستغرام', tiktok: 'تيك توك' }
+
+/** A shared link (the table kept its old name). `ytId` holds the platform's own id for all three. */
 export interface Song {
   id: number
   author: Who
+  platform: Platform
+  url: string
+  thumb: string | null
+  /** false → cannot be played inside the page; tapping opens the platform instead. */
+  embed: boolean
   ytId: string
   title: string
   channel: string | null

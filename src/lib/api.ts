@@ -25,6 +25,7 @@ const json = { 'Content-Type': 'application/json' }
 export const api = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, data?: unknown) => request<T>('POST', path, data === undefined ? null : JSON.stringify(data), json),
+  patch: <T>(path: string, data: unknown) => request<T>('PATCH', path, JSON.stringify(data), json),
   put: <T>(path: string, data: unknown) => request<T>('PUT', path, JSON.stringify(data), json),
   del: <T>(path: string) => request<T>('DELETE', path),
   // Audio is sent as an opaque binary body; its real type travels in a header.

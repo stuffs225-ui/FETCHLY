@@ -44,6 +44,11 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS nb_songs (
      id SERIAL PRIMARY KEY, author TEXT NOT NULL, yt_id TEXT NOT NULL, title TEXT NOT NULL, channel TEXT, note TEXT,
      start_sec INTEGER NOT NULL DEFAULT 0, reaction TEXT, created_at DOUBLE PRECISION NOT NULL)`,
+  // Links from YouTube, Instagram and TikTok share one table (added in schema version 3).
+  `ALTER TABLE nb_songs ADD COLUMN IF NOT EXISTS platform TEXT NOT NULL DEFAULT 'youtube'`,
+  `ALTER TABLE nb_songs ADD COLUMN IF NOT EXISTS url TEXT`,
+  `ALTER TABLE nb_songs ADD COLUMN IF NOT EXISTS thumb TEXT`,
+  `ALTER TABLE nb_songs ADD COLUMN IF NOT EXISTS embed BOOLEAN NOT NULL DEFAULT TRUE`,
   `CREATE TABLE IF NOT EXISTS nb_events (id SERIAL PRIMARY KEY, to_who TEXT NOT NULL, kind TEXT NOT NULL, created DOUBLE PRECISION NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS nb_attempts (key TEXT PRIMARY KEY, count INTEGER NOT NULL, since DOUBLE PRECISION NOT NULL)`,
 ]
@@ -53,7 +58,7 @@ const SCHEMA = [
 const TABLES = ['nb_settings', 'nb_slots', 'nb_presence', 'nb_locations', 'nb_together', 'nb_bottles', 'nb_songs', 'nb_events', 'nb_attempts']
 
 /** Bump when the schema/functions change so the one-time setup SQL is offered again. */
-export const SCHEMA_VERSION = '2'
+export const SCHEMA_VERSION = '3'
 const RLS_SQL = TABLES.map((t) => `ALTER TABLE ${t} ENABLE ROW LEVEL SECURITY;`)
 
 // One round trip per poll: presence, together-time, events, counts and shared state all come back in a single call.

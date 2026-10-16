@@ -212,10 +212,12 @@ async function audio(req, res, who, id) {
   res.end(buf)
 }
 
-// ---------------------------------------------------------------- songs (YouTube)
+// ---------------------------------------------------------------- shared links (YouTube / Instagram / TikTok)
 
 const YT_ID = /^[\w-]{11}$/
+const IG_CODE = /^[\w-]{5,}$/
 const OEMBED = process.env.YT_OEMBED_URL || 'https://www.youtube.com/oembed'
+const TT_OEMBED = process.env.TT_OEMBED_URL || 'https://www.tiktok.com/oembed'
 
 function parseSeconds(t) {
   if (!t) return 0
@@ -224,74 +226,142 @@ function parseSeconds(t) {
   return m ? Math.min((Number(m[1] ?? 0) * 3600) + (Number(m[2] ?? 0) * 60) + Number(m[3] ?? 0), 36000) : 0
 }
 
-/** Accepts the usual YouTube link shapes (watch, youtu.be, shorts, embed, live, music) or a bare 11-char id. */
-export function parseYouTube(input) {
-  const text = String(input ?? '').trim()
-  if (YT_ID.test(text)) return { id: text, start: 0 }
-  let url
+function toUrl(text) {
   try {
-    url = new URL(/^https?:\/\//i.test(text) ? text : `https://${text}`)
+    return new URL(/^https?:\/\//i.test(text) ? text : `https://${text}`)
   } catch {
     return null
   }
-  const host = url.hostname.replace(/^(www|m|music)\./, '')
-  let id = null
-  if (host === 'youtu.be') id = url.pathname.split('/')[1]
-  else if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
-    const parts = url.pathname.split('/').filter(Boolean)
-    if (url.pathname === '/watch') id = url.searchParams.get('v')
-    else if (['shorts', 'embed', 'live', 'v'].includes(parts[0])) id = parts[1]
-  }
-  if (!id || !YT_ID.test(id)) return null
-  return { id, start: parseSeconds(url.searchParams.get('t') ?? url.searchParams.get('start')) }
 }
 
-/** Title/channel come from YouTube's own oEmbed (no API key). It answers 401 for videos that forbid embedding. */
-async function lookupVideo(id) {
+/** Short TikTok links (vm./vt.//t/) redirect to the real video page; follow them to find the id. */
+async function resolveRedirect(url) {
   try {
-    const res = await fetch(`${OEMBED}?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${id}`)}&format=json`, { signal: AbortSignal.timeout(5000) })
-    if (res.status === 401 || res.status === 403) return { embeddable: false }
-    if (res.status === 404 || res.status === 400) return { missing: true }
-    if (!res.ok) return { unknown: true }
-    const d = await res.json()
-    return { embeddable: true, title: String(d.title ?? '').slice(0, 200), channel: String(d.author_name ?? '').slice(0, 120) }
+    const res = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(4000), headers: { 'User-Agent': 'Mozilla/5.0' } })
+    return toUrl(res.url)
   } catch {
-    return { unknown: true } // could not reach YouTube from here: accept with a generic title
+    return null
   }
 }
 
-async function songPreview(req, res) {
-  const p = parseYouTube((await readJson(req)).url)
-  if (!p) return send(res, 422, { error: 'bad_link' })
-  const v = await lookupVideo(p.id)
-  if (v.missing) return send(res, 422, { error: 'not_found' })
-  if (v.embeddable === false) return send(res, 422, { error: 'not_embeddable' })
-  send(res, 200, { id: p.id, start: p.start, title: v.title ?? null, channel: v.channel ?? null })
+/**
+ * Recognises the usual link shapes of YouTube (watch, youtu.be, shorts, embed, live, music),
+ * Instagram (post, reel, tv) and TikTok (video page or short link). Returns null for anything else.
+ */
+export async function parseLink(input) {
+  const text = String(input ?? '').trim()
+  if (YT_ID.test(text)) return { platform: 'youtube', id: text, start: 0, url: `https://www.youtube.com/watch?v=${text}` }
+  let url = toUrl(text)
+  if (!url) return null
+  let host = url.hostname.replace(/^(www|m|music)\./, '')
+
+  if (host === 'vm.tiktok.com' || host === 'vt.tiktok.com' || (host === 'tiktok.com' && url.pathname.startsWith('/t/'))) {
+    const resolved = await resolveRedirect(url.toString())
+    if (!resolved) return null
+    url = resolved
+    host = url.hostname.replace(/^(www|m)\./, '')
+  }
+
+  if (host === 'youtu.be' || host === 'youtube.com' || host === 'youtube-nocookie.com') {
+    let id = null
+    if (host === 'youtu.be') id = url.pathname.split('/')[1]
+    else {
+      const parts = url.pathname.split('/').filter(Boolean)
+      if (url.pathname === '/watch') id = url.searchParams.get('v')
+      else if (['shorts', 'embed', 'live', 'v'].includes(parts[0])) id = parts[1]
+    }
+    if (!id || !YT_ID.test(id)) return null
+    return { platform: 'youtube', id, start: parseSeconds(url.searchParams.get('t') ?? url.searchParams.get('start')), url: `https://www.youtube.com/watch?v=${id}` }
+  }
+
+  if (host === 'instagram.com' || host === 'instagr.am') {
+    const [kind, code] = url.pathname.split('/').filter(Boolean)
+    const k = { p: 'p', reel: 'reel', reels: 'reel', tv: 'tv' }[kind]
+    if (!k || !code || !IG_CODE.test(code)) return null
+    return { platform: 'instagram', id: code, start: 0, url: `https://www.instagram.com/${k}/${code}/` }
+  }
+
+  if (host === 'tiktok.com') {
+    const m = /\/(?:video|photo)\/(\d{8,25})/.exec(url.pathname)
+    if (!m) return null
+    return { platform: 'tiktok', id: m[1], start: 0, url: `${url.origin}${url.pathname.replace(/\/$/, '')}` }
+  }
+  return null
+}
+
+/**
+ * Title/author/thumbnail from each platform's own oEmbed (no API keys). YouTube answers 401 for videos that
+ * forbid embedding — those are still saved, but open on YouTube instead of playing here. Instagram has no
+ * key-free oEmbed, so it is saved with a plain title. If a platform cannot be reached we save with a generic title.
+ */
+async function lookup(link) {
+  const generic = { youtube: 'فيديو يوتيوب', instagram: link.url.includes('/reel/') ? 'ريل إنستغرام' : 'منشور إنستغرام', tiktok: 'فيديو تيك توك' }[link.platform]
+  const base = { title: generic, channel: null, thumb: null, embed: true }
+  try {
+    if (link.platform === 'youtube') {
+      const res = await fetch(`${OEMBED}?url=${encodeURIComponent(link.url)}&format=json`, { signal: AbortSignal.timeout(5000) })
+      if (res.status === 401 || res.status === 403) return { ...base, embed: false, thumb: `https://i.ytimg.com/vi/${link.id}/mqdefault.jpg` }
+      if (res.status === 404 || res.status === 400) return { missing: true }
+      if (!res.ok) return base
+      const d = await res.json()
+      return { ...base, title: String(d.title ?? generic).slice(0, 200), channel: String(d.author_name ?? '').slice(0, 120) || null, thumb: `https://i.ytimg.com/vi/${link.id}/mqdefault.jpg` }
+    }
+    if (link.platform === 'tiktok') {
+      const res = await fetch(`${TT_OEMBED}?url=${encodeURIComponent(link.url)}`, { signal: AbortSignal.timeout(5000) })
+      if (!res.ok) return base
+      const d = await res.json()
+      return { ...base, title: String(d.title || generic).slice(0, 200), channel: String(d.author_name ?? '').slice(0, 120) || null, thumb: typeof d.thumbnail_url === 'string' ? d.thumbnail_url.slice(0, 600) : null }
+    }
+  } catch {
+    /* fall through: platform unreachable from here */
+  }
+  return base
 }
 
 const songShape = (r) => ({
-  id: r.id, author: r.author, ytId: r.yt_id, title: r.title, channel: r.channel, note: r.note,
-  start: r.start_sec, reaction: r.reaction, createdAt: r.created_at,
+  id: r.id, author: r.author, platform: r.platform, ytId: r.yt_id,
+  // Rows saved before links from other platforms existed have no url/thumb: they are YouTube.
+  url: r.url ?? `https://www.youtube.com/watch?v=${r.yt_id}`,
+  title: r.title, channel: r.channel, note: r.note,
+  thumb: r.thumb ?? (r.platform === 'youtube' ? `https://i.ytimg.com/vi/${r.yt_id}/mqdefault.jpg` : null), embed: r.embed, start: r.start_sec, reaction: r.reaction, createdAt: r.created_at,
 })
+
+async function songPreview(req, res) {
+  const link = await parseLink((await readJson(req)).url)
+  if (!link) return send(res, 422, { error: 'bad_link' })
+  const m = await lookup(link)
+  if (m.missing) return send(res, 422, { error: 'not_found' })
+  send(res, 200, { platform: link.platform, id: link.id, start: link.start, url: link.url, title: m.title, channel: m.channel, thumb: m.thumb, embed: m.embed })
+}
 
 async function songAdd(req, res, who) {
   const body = await readJson(req)
-  const p = parseYouTube(body.url)
-  if (!p) return send(res, 422, { error: 'bad_link' })
-  const v = await lookupVideo(p.id)
-  if (v.missing) return send(res, 422, { error: 'not_found' })
-  if (v.embeddable === false) return send(res, 422, { error: 'not_embeddable' })
+  const link = await parseLink(body.url)
+  if (!link) return send(res, 422, { error: 'bad_link' })
+  const m = await lookup(link)
+  if (m.missing) return send(res, 422, { error: 'not_found' })
   const note = String(body.note ?? '').trim().slice(0, 140) || null
-  const start = Number.isFinite(Number(body.start)) ? Math.max(0, Math.min(Math.round(Number(body.start)), 36000)) : p.start
+  const start = link.platform === 'youtube' && Number.isFinite(Number(body.start)) ? Math.max(0, Math.min(Math.round(Number(body.start)), 36000)) : 0
   const r = await q(
-    'INSERT INTO nb_songs (author, yt_id, title, channel, note, start_sec, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-    [who, p.id, v.title || 'فيديو يوتيوب', v.channel || null, note, start, Date.now()],
+    `INSERT INTO nb_songs (author, platform, yt_id, url, title, channel, thumb, embed, note, start_sec, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+    [who, link.platform, link.id, link.url, m.title, m.channel, m.thumb, m.embed, note, start, Date.now()],
   )
   send(res, 201, songShape(r[0]))
 }
 
 async function songList(_req, res) {
   send(res, 200, (await q('SELECT * FROM nb_songs ORDER BY id DESC LIMIT 200')).map(songShape))
+}
+
+// Only the person who added a link can change or delete it.
+async function songEdit(req, res, who, id) {
+  const body = await readJson(req)
+  const note = String(body.note ?? '').trim().slice(0, 140) || null
+  const start = Number.isFinite(Number(body.start)) ? Math.max(0, Math.min(Math.round(Number(body.start)), 36000)) : 0
+  const r = await q("UPDATE nb_songs SET note = $1, start_sec = CASE WHEN platform = 'youtube' THEN $2 ELSE 0 END WHERE id = $3 AND author = $4 RETURNING *", [note, start, id, who])
+  if (!r.length) return send(res, 404, { error: 'not_found' })
+  send(res, 200, songShape(r[0]))
 }
 
 async function songRemove(_req, res, who, id) {
@@ -333,7 +403,7 @@ function listenView(raw, now) {
 
 async function listenInvite(req, res, who) {
   const id = Number((await readJson(req)).songId)
-  const s = (await q('SELECT * FROM nb_songs WHERE id = $1', [id]))[0]
+  const s = (await q("SELECT * FROM nb_songs WHERE id = $1 AND platform = 'youtube' AND embed", [id]))[0]
   if (!s) return send(res, 404, { error: 'not_found' })
   await setSetting('listen', JSON.stringify({ status: 'invite', host: who, songId: s.id, ytId: s.yt_id, title: s.title, startSec: s.start_sec, createdAt: Date.now() }))
   send(res, 204)
@@ -430,7 +500,8 @@ export async function handle(req, res) {
     if (!who) return send(res, 401, { error: 'unauthorized' })
 
     if (path === '/api/me' && m === 'GET') return send(res, 200, await profileWithInvite(who))
-    if (path === '/api/invite' && m === 'GET') return send(res, 200, { code: await inviteCode() })
+    // The code only matters while the other person's place is free (e.g. after clearing their code).
+    if (path === '/api/invite' && m === 'GET') return send(res, 200, { code: (await hasPassword(partnerOf(who))) ? null : await inviteCode() })
     if (path === '/api/sync' && m === 'POST') return await sync(req, res, who)
     if (path === '/api/ripple' && m === 'POST') { await pushEvent(partnerOf(who), 'ripple'); return send(res, 204) }
     // If one of them forgets their code, the other can clear it so it can be chosen again.
@@ -443,6 +514,7 @@ export async function handle(req, res) {
     if (path === '/api/songs/preview' && m === 'POST') return await songPreview(req, res)
     const sm = /^\/api\/songs\/(\d+)(\/react)?$/.exec(path)
     if (sm && !sm[2] && m === 'DELETE') return await songRemove(req, res, who, Number(sm[1]))
+    if (sm && !sm[2] && m === 'PATCH') return await songEdit(req, res, who, Number(sm[1]))
     if (sm && sm[2] && m === 'POST') return await songReact(req, res, who, Number(sm[1]))
     if (path === '/api/listen' && m === 'POST') return await listenInvite(req, res, who)
     if (path === '/api/listen/join' && m === 'POST') return await listenJoin(req, res, who)

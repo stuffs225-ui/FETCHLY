@@ -45,7 +45,7 @@ export function loadYouTube(): Promise<YTNamespace> {
   return api
 }
 
-export const thumb = (id: string) => `https://i.ytimg.com/vi/${id}/mqdefault.jpg`
+export const ytThumb = (id: string) => `https://i.ytimg.com/vi/${id}/mqdefault.jpg`
 export const watchUrl = (id: string, start = 0) => `https://youtu.be/${id}${start ? `?t=${start}` : ''}`
 
 /** "1:23" / "83" / "1h2m3s" → seconds (0 when unreadable). */

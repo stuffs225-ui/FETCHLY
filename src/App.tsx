@@ -246,7 +246,7 @@ function Home({ profile, onTogether }: { profile: Profile; onTogether: (v: boole
         <div className="glass relative mx-auto grid max-w-sm grid-cols-3 rounded-2xl p-1.5">
           {([
             ['heart', 'نبضنا', <Heart key="h" className="h-[18px] w-[18px]" />],
-            ['songs', 'الأغاني', <Music key="m" className="h-[18px] w-[18px]" />],
+            ['songs', 'المشاركات', <Music key="m" className="h-[18px] w-[18px]" />],
             ['sea', 'البحر', <BottleArt key="b" className="h-[20px] w-[10px]" />],
           ] as const).map(([k, label, icon]) => (
             <button key={k} onClick={() => setTab(k)} className="relative flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium text-ink">

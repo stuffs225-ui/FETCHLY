@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ExternalLink, Headphones, Heart, Music, Plus, SkipForward, Trash2, X } from 'lucide-react'
+import { ExternalLink, Headphones, Heart, Music, Pencil, Plus, SkipForward, Trash2, X } from 'lucide-react'
 import { HeartShape } from './Heart'
 import { AddSong } from './AddSong'
-import { Thumb } from './Thumb'
+import { Thumb, PlatformBadge } from './Thumb'
+import { EditSong } from './EditSong'
 import { useToast } from './toastContext'
 import { api } from '@/lib/api'
 import type { Copy } from '@/lib/copy'
 import { ago } from '@/lib/time'
+import { PLATFORM_NAME } from '@/lib/types'
 import type { Listen, Song, SongsInfo, Who } from '@/lib/types'
-import { loadYouTube, watchUrl, YT_STATE } from '@/lib/youtube'
+import { loadYouTube, watchUrl, YT_STATE, ytThumb } from '@/lib/youtube'
 import type { YTPlayer } from '@/lib/youtube'
 
 interface Props {
@@ -30,6 +32,7 @@ export function Songs({ me, copy, songsInfo, listen, serverNow }: Props) {
   const [songs, setSongs] = useState<Song[] | null>(null)
   const [current, setCurrent] = useState<Song | null>(null)
   const [adding, setAdding] = useState(false)
+  const [editing, setEditing] = useState<Song | null>(null)
   const [ready, setReady] = useState(false)
   const [playing, setPlaying] = useState(false)
   const [needTap, setNeedTap] = useState(false)
@@ -116,7 +119,7 @@ export function Songs({ me, copy, songsInfo, listen, serverNow }: Props) {
       }
       const { songs: list, current: cur } = live.current
       if (!list || !cur) return
-      const next = list[list.findIndex((x) => x.id === cur.id) + 1]
+      const next = list.slice(list.findIndex((x) => x.id === cur.id) + 1).find((x) => x.platform === 'youtube' && x.embed)
       if (next) playSolo(next)
     }
 
@@ -178,6 +181,28 @@ export function Songs({ me, copy, songsInfo, listen, serverNow }: Props) {
     armGuard()
   }
 
+  /** Play inside the page when we can; otherwise (blocked embed) go to the platform itself. */
+  const pick = (s: Song) => {
+    if (session) return
+    if (!s.embed) {
+      window.open(s.url, '_blank', 'noopener')
+      return
+    }
+    if (s.platform === 'youtube') {
+      playSolo(s)
+      return
+    }
+    player.current?.pauseVideo()
+    setNeedTap(false)
+    setFailed(null)
+    setCurrent(s)
+  }
+
+  const saveEdit = (updated: Song) => {
+    setSongs((list) => list?.map((x) => (x.id === updated.id ? updated : x)) ?? null)
+    setCurrent((c) => (c?.id === updated.id ? updated : c))
+  }
+
   const proposeTogether = async (s: Song) => {
     await api.post('/listen', { songId: s.id }).catch(() => toast(copy.toast.error))
   }
@@ -202,6 +227,9 @@ export function Songs({ me, copy, songsInfo, listen, serverNow }: Props) {
   const inviteSong = invitedByMe ? songs?.find((s) => s.id === listen.songId) : undefined
   const shown = session ? (songs?.find((s) => s.id === session.songId) ?? current) : current
   const failedUrl = failed ? watchUrl(failed.id, Math.floor(failed.start)) : null
+  const frame = !session && current && current.embed && current.platform !== 'youtube' ? current : null
+  const frameSrc = frame ? (frame.platform === 'tiktok' ? `https://www.tiktok.com/player/v1/${frame.ytId}?autoplay=1&music_info=1&description=1` : `${frame.url.replace(/\/$/, '')}/embed/`) : null
+  const canTogether = Boolean(shown && shown.platform === 'youtube' && shown.embed && !frame)
   const other: Who = me === 'a' ? 'b' : 'a'
 
   const list = useMemo(() => songs ?? [], [songs])
@@ -209,7 +237,7 @@ export function Songs({ me, copy, songsInfo, listen, serverNow }: Props) {
   return (
     <div className="flex h-full flex-col">
       <div className="px-5 pt-1">
-        <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-glass-line bg-black/40">
+        <div className={frame ? 'hidden' : 'relative aspect-video w-full overflow-hidden rounded-2xl border border-glass-line bg-black/40'}>
           <div ref={wrap} className="absolute inset-0 [&_iframe]:h-full [&_iframe]:w-full" />
           {!shown && !session && (
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 bg-night/70 text-mist">
@@ -224,10 +252,24 @@ export function Songs({ me, copy, songsInfo, listen, serverNow }: Props) {
           )}
           {failedUrl && (
             <a href={failedUrl} target="_blank" rel="noopener noreferrer" className="absolute inset-0 flex items-center justify-center gap-2 bg-black/70 text-sm text-white">
-              <ExternalLink className="h-4 w-4" /> {copy.songs.openYt}
+              <ExternalLink className="h-4 w-4" /> {copy.songs.openIn(PLATFORM_NAME.youtube)}
             </a>
           )}
         </div>
+
+        {frame && frameSrc && (
+          <div className="mx-auto aspect-[9/16] max-h-[52dvh] overflow-hidden rounded-2xl border border-glass-line bg-black/40">
+            <iframe
+              key={frame.id}
+              src={frameSrc}
+              title={frame.title}
+              className="h-full w-full"
+              allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+              allowFullScreen
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
+          </div>
+        )}
 
         <div className="mt-2.5 flex min-h-[44px] items-center gap-2">
           <AnimatePresence mode="wait" initial={false}>
@@ -249,7 +291,12 @@ export function Songs({ me, copy, songsInfo, listen, serverNow }: Props) {
             ) : (
               <motion.div key="n" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-1 items-center gap-2">
                 <p className="line-clamp-1 flex-1 text-sm text-ink">{shown?.title ?? ''}</p>
-                {shown && (
+                {shown && frame && (
+                  <a href={shown.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 rounded-xl border border-glass-line px-3.5 py-2 text-sm text-ink active:scale-95">
+                    <ExternalLink className="h-4 w-4" /> {copy.songs.openIn(PLATFORM_NAME[shown.platform])}
+                  </a>
+                )}
+                {shown && canTogether && (
                   <>
                     <button onClick={() => proposeTogether(shown)} aria-label={copy.songs.together} className="flex items-center gap-1.5 rounded-xl bg-accent px-3.5 py-2 text-sm font-bold text-on-accent active:scale-95">
                       <Headphones className="h-4 w-4" /> {copy.songs.together}
@@ -290,13 +337,15 @@ export function Songs({ me, copy, songsInfo, listen, serverNow }: Props) {
                 className={`flex items-center gap-3 rounded-2xl border p-2 ${active ? 'border-accent/50 bg-accent/10' : 'border-glass-line bg-glass'}`}
               >
                 <button
-                  onClick={() => !session && playSolo(s)}
+                  onClick={() => pick(s)}
                   disabled={Boolean(session)}
                   className="flex min-w-0 flex-1 items-center gap-3 text-start disabled:opacity-60"
                 >
                   <span className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-xl bg-mist/20">
-                    <Thumb id={s.ytId} className="h-full w-full" />
+                    <Thumb src={s.thumb} platform={s.platform} badge={false} className="h-full w-full" />
                     <span className="absolute start-1 top-1"><HeartShape tone={s.author} className="h-3.5 w-4" /></span>
+                    <PlatformBadge platform={s.platform} className="absolute bottom-1 start-1" />
+                    {!s.embed && <span className="absolute bottom-1 end-1 rounded-md bg-black/60 p-0.5 text-white"><ExternalLink className="h-3 w-3" /></span>}
                     {active && playing && <span className="absolute inset-0 flex items-end justify-center gap-[3px] bg-black/35 pb-2">{[0, 1, 2].map((i) => <span key={i} className="w-[3px] animate-bob rounded-full bg-white" style={{ height: 10 + i * 4, animationDelay: `${i * -0.4}s` }} />)}</span>}
                   </span>
                   <span className="min-w-0 flex-1">
@@ -306,8 +355,9 @@ export function Songs({ me, copy, songsInfo, listen, serverNow }: Props) {
                   </span>
                 </button>
                 {mine ? (
-                  <span className="flex flex-col items-center gap-1">
+                  <span className="flex flex-col items-center">
                     {s.reaction === 'heart' && <Heart className="h-4 w-4 fill-accent text-accent" />}
+                    <button onClick={() => setEditing(s)} aria-label="تعديل" className="rounded-full p-2 text-mist active:scale-90"><Pencil className="h-4 w-4" /></button>
                     <button onClick={() => remove(s)} aria-label="حذف" className="rounded-full p-2 text-mist active:scale-90"><Trash2 className="h-4 w-4" /></button>
                   </span>
                 ) : (
@@ -322,6 +372,7 @@ export function Songs({ me, copy, songsInfo, listen, serverNow }: Props) {
       </ul>
 
       <AddSong open={adding} onClose={() => setAdding(false)} copy={copy} onAdded={refresh} />
+      <EditSong song={editing} onClose={() => setEditing(null)} copy={copy} onSaved={saveEdit} />
     </div>
   )
 }
@@ -334,7 +385,7 @@ export function InviteBanner({ listen, copy, onJoin, onLater }: { listen: Listen
       exit={{ opacity: 0, y: -10 }}
       className="mx-4 mb-2 flex items-center gap-3 rounded-2xl border border-accent/40 bg-dusk p-2.5"
     >
-      <Thumb id={listen.ytId} className="aspect-video w-20 shrink-0 rounded-lg" />
+      <Thumb src={ytThumb(listen.ytId)} platform="youtube" className="aspect-video w-20 shrink-0 rounded-lg" />
       <div className="min-w-0 flex-1">
         <p className="text-xs text-accent-soft">{copy.toast.invite}</p>
         <p className="truncate text-sm text-ink">{listen.title}</p>

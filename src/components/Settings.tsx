@@ -42,7 +42,7 @@ export function Settings({ open, onClose, sound, setSound, chimeOn, setChimeOn, 
   const [invite, setInvite] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   useEffect(() => {
-    if (open) api.get<{ code: string }>('/invite').then((r) => setInvite(r.code)).catch(() => {})
+    if (open) api.get<{ code: string | null }>('/invite').then((r) => setInvite(r.code)).catch(() => {})
   }, [open])
   const [confirmReset, setConfirmReset] = useState(false)
   const [done, setDone] = useState(false)

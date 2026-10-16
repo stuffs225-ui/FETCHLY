@@ -4,14 +4,19 @@ import { Sheet } from './Sheet'
 import { useToast } from './toastContext'
 import { api, ApiError } from '@/lib/api'
 import type { Copy } from '@/lib/copy'
-import { Thumb } from './Thumb'
+import { Thumb, PlatformBadge } from './Thumb'
+import type { Platform } from '@/lib/types'
 import { formatTime, parseTime } from '@/lib/youtube'
 
 interface Preview {
+  platform: Platform
   id: string
   start: number
+  url: string
   title: string | null
   channel: string | null
+  thumb: string | null
+  embed: boolean
 }
 
 /** Paste a YouTube link → see the video right away → add an optional line → done. */
@@ -107,9 +112,10 @@ function AddBody({ copy, onAdded, onClose }: { copy: Copy; onAdded: () => void; 
       {preview && !loading && (
         <div className="space-y-3">
           <div className="flex gap-3 rounded-2xl border border-glass-line bg-glass p-2.5">
-            <Thumb id={preview.id} className="aspect-video w-32 shrink-0 rounded-xl" />
+            <Thumb src={preview.thumb} platform={preview.platform} className="aspect-video w-32 shrink-0 rounded-xl" />
             <div className="min-w-0 py-1">
-              <p className="line-clamp-2 text-sm font-medium leading-6 text-ink">{preview.title ?? 'فيديو يوتيوب'}</p>
+              <PlatformBadge platform={preview.platform} />
+              <p className="mt-1 line-clamp-2 text-sm font-medium leading-6 text-ink">{preview.title ?? ''}</p>
               {preview.channel && <p className="mt-1 truncate text-xs text-mist">{preview.channel}</p>}
             </div>
           </div>
@@ -119,7 +125,8 @@ function AddBody({ copy, onAdded, onClose }: { copy: Copy; onAdded: () => void; 
             placeholder={copy.songs.note}
             className="w-full rounded-2xl border border-glass-line bg-glass px-4 py-3 text-ink outline-none placeholder:text-mist/60 focus:border-accent/50"
           />
-          <label className="flex items-center justify-between gap-3 rounded-2xl border border-glass-line bg-glass px-4 py-2.5">
+          {!preview.embed && <p className="px-1 text-xs leading-6 text-accent-soft">{copy.songs.noEmbed}</p>}
+          {preview.platform === 'youtube' && <label className="flex items-center justify-between gap-3 rounded-2xl border border-glass-line bg-glass px-4 py-2.5">
             <span className="text-sm text-mist">{copy.songs.startsAt}</span>
             <input
               value={start}
@@ -129,7 +136,7 @@ function AddBody({ copy, onAdded, onClose }: { copy: Copy; onAdded: () => void; 
               inputMode="numeric"
               className="w-20 bg-transparent text-center text-ink outline-none placeholder:text-mist/50"
             />
-          </label>
+          </label>}
           <button onClick={send} disabled={sending} className="w-full rounded-2xl bg-accent py-3.5 text-base font-bold text-on-accent transition-transform active:scale-[0.98] disabled:opacity-50">
             {copy.songs.send}
           </button>
