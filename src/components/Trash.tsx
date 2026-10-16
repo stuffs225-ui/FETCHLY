@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Image as ImageIcon, Mic, Music, RotateCcw, Trash2 } from 'lucide-react'
 import { Sheet } from './Sheet'
+import { Skeleton } from './Skeleton'
 import { PlatformBadge } from './Thumb'
 import { VoicePlayer } from './VoicePlayer'
 import { api } from '@/lib/api'
@@ -62,7 +63,7 @@ function TrashBody() {
           </button>
         ))}
       </div>
-      {items === null && <p className="py-10 text-center text-sm text-mist">…</p>}
+      {items === null && <Skeleton rows={3} tall />}
       {items?.length === 0 && <p className="py-10 text-center text-sm text-mist">لا شيء هنا</p>}
       <ul className="space-y-3">
         {tab === 'songs' && data?.songs.map((s) => (

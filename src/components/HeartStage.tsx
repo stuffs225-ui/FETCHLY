@@ -36,6 +36,9 @@ interface Props {
 
 interface Ring { id: number; i: 0 | 1 }
 
+/** Both of you touched the other's heart within a few seconds of each other. */
+const TOGETHER_TOUCH_MS = 3500
+
 /**
  * Two hearts. Their gap on screen is the real distance between you. Whenever
  * you are both here, they lock onto the server clock and beat as one.
@@ -58,6 +61,17 @@ export function HeartStage({ me, partnerState, connected, serverNow, rippleTick,
   useEffect(() => {
     spawnRef.current = (i) => setRings((r) => [...r.slice(-4), { id: ++ringSeq.current, i }])
   }, [])
+
+  const [waves, setWaves] = useState<number[]>([])
+  const lastTouch = useRef({ mine: 0, theirs: 0 })
+  const waveSeq = useRef(0)
+  const mutual = () => {
+    const id = ++waveSeq.current
+    setWaves((w) => [...w.slice(-1), id])
+    sim.current.excite[0] = 1
+    sim.current.excite[1] = 1
+    vibrate([30, 50, 30, 50, 80])
+  }
 
   const wasTogether = useRef(false)
   useEffect(() => {
@@ -107,10 +121,12 @@ export function HeartStage({ me, partnerState, connected, serverNow, rippleTick,
         }
 
         const f = alive ? pulse(frac(s.phase[i])) : 0
+        // A heart that isn't here doesn't beat: it only breathes, slowly, like a held breath.
+        const breath = alive || !L.connected ? 0 : 0.5 + 0.5 * Math.sin(now / 1300)
         const el = heartEls.current[i]
-        if (el) el.style.transform = `scale(${1 + 0.1 * f + s.excite[i] * 0.04})`
+        if (el) el.style.transform = `scale(${1 + 0.1 * f + s.excite[i] * 0.04 + breath * 0.05})`
         const glow = glowEls.current[i]
-        if (glow) glow.style.opacity = String((!alive ? 0.04 : 0.1) + 0.2 * f)
+        if (glow) glow.style.opacity = String((!alive ? 0.04 + breath * 0.1 : 0.1) + 0.2 * f)
       }
     }
     raf = requestAnimationFrame(tick)
@@ -123,7 +139,10 @@ export function HeartStage({ me, partnerState, connected, serverNow, rippleTick,
     sim.current.excite[0] = 1
     spawnRef.current(0)
     vibrate([20, 40, 20, 40, 30])
-  }, [rippleTick])
+    const t = Date.now()
+    lastTouch.current.theirs = t
+    if (t - lastTouch.current.mine < TOGETHER_TOUCH_MS) mutual()
+  }, [rippleTick]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const touchPartner = () => {
     if (!connected) return
@@ -131,6 +150,9 @@ export function HeartStage({ me, partnerState, connected, serverNow, rippleTick,
     spawnRef.current(1)
     vibrate(14)
     onTouchPartner()
+    const t = Date.now()
+    lastTouch.current.mine = t
+    if (t - lastTouch.current.theirs < TOGETHER_TOUCH_MS) mutual()
   }
 
   const gap = gapFor(distance.meters, together)
@@ -189,6 +211,19 @@ export function HeartStage({ me, partnerState, connected, serverNow, rippleTick,
           transition={spring}
         />
       </svg>
+
+      {waves.map((id) => (
+        <span key={id} className="pointer-events-none absolute left-1/2 top-1/2 h-0 w-0" aria-hidden>
+          {[0, 1, 2].map((k) => (
+            <span
+              key={k}
+              className="nb-wave absolute h-28 w-28 rounded-full border-2"
+              style={{ borderColor: k === 1 ? 'var(--heart-b)' : k === 2 ? 'var(--heart-a)' : 'var(--accent)', animationDelay: `${k * 0.45}s` }}
+              onAnimationEnd={() => { if (k === 2) setWaves((w) => w.filter((x) => x !== id)) }}
+            />
+          ))}
+        </span>
+      ))}
 
       {heart(0, me)}
       {heart(1, partner)}

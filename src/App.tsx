@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, MotionConfig, motion } from 'framer-motion'
 import { Heart, MapPin, Music, Settings as SettingsIcon, X } from 'lucide-react'
 import { Background } from '@/components/Background'
 import { Join } from '@/components/Join'
@@ -18,12 +18,36 @@ import { makeCopy } from '@/lib/copy'
 import type { Copy } from '@/lib/copy'
 import { useLive } from '@/lib/live'
 import { useLocationShare } from '@/lib/location'
-import { usePref } from '@/lib/prefs'
+import { usePref, vibrate } from '@/lib/prefs'
 import { useTheme } from '@/lib/theme'
 import { ago, dist, num, spent } from '@/lib/time'
 import type { DistanceInfo, Profile, PState } from '@/lib/types'
 
 type Tab = 'heart' | 'songs' | 'sea'
+const ORDER: Record<Tab, number> = { heart: 0, songs: 1, sea: 2 }
+/** Screens slide sideways in the direction of the tab bar (Arabic: first tab on the right). */
+const slide = {
+  enter: (d: number) => ({ opacity: 0, x: d === 0 ? 0 : d > 0 ? -44 : 44 }),
+  center: { opacity: 1, x: 0, transition: { duration: 0.36, ease: [0.22, 1, 0.36, 1] as const } },
+  exit: (d: number) => ({ opacity: 0, x: d === 0 ? 0 : d > 0 ? 44 : -44, transition: { duration: 0.16, ease: 'easeIn' as const } }),
+}
+
+/** Time together today as a ring that slowly fills towards one hour. */
+function TogetherRing({ today, total }: { today: number; total: number }) {
+  const p = Math.min(1, today / 3600)
+  return (
+    <div className="mt-3 flex items-center justify-center gap-2.5 text-xs text-mist/80">
+      <svg width="30" height="30" viewBox="0 0 30 30" className="-rotate-90" aria-hidden>
+        <circle cx="15" cy="15" r="12" fill="none" stroke="var(--line)" strokeWidth="2.5" />
+        <motion.circle cx="15" cy="15" r="12" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" initial={{ pathLength: 0 }} animate={{ pathLength: Math.max(0.02, p) }} transition={{ duration: 1.6, ease: 'easeOut' }} />
+      </svg>
+      <span className="text-start leading-5">
+        معًا اليوم {spent(today)}
+        {total > today + 60 && <span className="block text-[11px] text-mist/60">كل ما قضيناه معًا {spent(total)}</span>}
+      </span>
+    </div>
+  )
+}
 
 function distanceLine(copy: Copy, d: DistanceInfo, partner: PState, partnerAt: number | null) {
   if (d.meters === null) return null
@@ -117,9 +141,13 @@ function Home({ profile, onTogether }: { profile: Profile; onTogether: (v: boole
   const sessionStart = listen?.status === 'playing' ? (listen.startAt ?? null) : null
   const shownTab: Tab = sessionStart !== null && forcedFor !== sessionStart ? 'songs' : tab
   const setTab = (t: Tab) => {
+    if (t !== shownTab) vibrate(8)
     setForcedFor(sessionStart)
     setTabState(t)
   }
+  // Remember which way the last switch went so the old screen leaves the way the new one arrives.
+  const [tabInfo, setTabInfo] = useState<{ tab: Tab; dir: number }>({ tab: shownTab, dir: 0 })
+  if (tabInfo.tab !== shownTab) setTabInfo({ tab: shownTab, dir: ORDER[shownTab] - ORDER[tabInfo.tab] })
 
   const joinListen = async () => {
     await api.post('/listen/join').catch(() => toast(copy.toast.error))
@@ -151,15 +179,16 @@ function Home({ profile, onTogether }: { profile: Profile; onTogether: (v: boole
       </AnimatePresence>
 
       <main className="relative flex-1 overflow-hidden">
-        <AnimatePresence mode="wait" initial={false}>
+        <AnimatePresence initial={false} custom={tabInfo.dir}>
           {shownTab === 'heart' ? (
             <motion.section
               key="heart"
               className="absolute inset-0 flex flex-col items-center justify-center overflow-y-auto pb-2 scroll-soft"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              custom={tabInfo.dir}
+              variants={slide}
+              initial="enter"
+              animate="center"
+              exit="exit"
             >
               <HeartStage
                 me={profile.who}
@@ -188,8 +217,8 @@ function Home({ profile, onTogether }: { profile: Profile; onTogether: (v: boole
                 {!dLine && sharing && myAt && state.distance.at[profile.partner] === null && <p className="mt-3 text-xs text-mist">{copy.distance.waitingOther}</p>}
                 {state.distance.closestToday !== null && dLine && state.distance.meters !== null && state.distance.meters > state.distance.closestToday + 50 && <p className="mt-1.5 text-xs text-mist/80">{copy.distance.closest(dist(state.distance.closestToday))}</p>}
 
-                {state.together.total >= 60 && <p className="mt-3 text-xs text-mist/70">معًا اليوم {spent(state.together.today)}</p>}
-                              </div>
+                {state.together.total >= 60 && <TogetherRing today={state.together.today} total={state.together.total} />}
+              </div>
 
               {profile.invite && !inviteSeen && (
                 <div className="glass mx-6 mb-3 rounded-2xl p-3.5">
@@ -221,10 +250,11 @@ function Home({ profile, onTogether }: { profile: Profile; onTogether: (v: boole
             <motion.section
               key="songs"
               className="absolute inset-0"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              custom={tabInfo.dir}
+              variants={slide}
+              initial="enter"
+              animate="center"
+              exit="exit"
             >
               <Songs me={profile.who} copy={copy} songsInfo={state.songs} listen={state.listen} serverNow={serverNow} />
             </motion.section>
@@ -232,10 +262,11 @@ function Home({ profile, onTogether }: { profile: Profile; onTogether: (v: boole
             <motion.section
               key="sea"
               className="absolute inset-0"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              custom={tabInfo.dir}
+              variants={slide}
+              initial="enter"
+              animate="center"
+              exit="exit"
             >
               <Sea me={profile.who} waiting={state.waiting} copy={copy} onWaiting={setWaiting} active={shownTab === 'sea'} fxTick={openedTick} />
             </motion.section>
@@ -250,14 +281,14 @@ function Home({ profile, onTogether }: { profile: Profile; onTogether: (v: boole
             ['songs', 'المشاركات', <Music key="m" className="h-[18px] w-[18px]" />],
             ['sea', 'البحر', <BottleArt key="b" className="h-[20px] w-[10px]" />],
           ] as const).map(([k, label, icon]) => (
-            <button key={k} onClick={() => setTab(k)} className="relative flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium text-ink">
+            <motion.button key={k} onClick={() => setTab(k)} whileTap={{ scale: 0.94 }} className="relative flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium text-ink">
               {shownTab === k && <motion.span layoutId="tab" className="absolute inset-0 rounded-xl bg-mist/20" transition={{ type: 'spring', stiffness: 320, damping: 32 }} />}
               <span className="relative flex items-center gap-1.5">
                 {icon}
                 {label}
                 {k === 'sea' && state.waiting > 0 && <span className="rounded-full bg-accent px-1.5 text-[11px] font-bold leading-5 text-on-accent">{num(state.waiting)}</span>}
               </span>
-            </button>
+            </motion.button>
           ))}
         </div>
       </nav>
@@ -300,9 +331,11 @@ export default function App() {
   }, [])
 
   return (
+    <MotionConfig reducedMotion="user">
     <ToastProvider>
       <Background together={together && profile !== null} />
       {booting ? null : profile ? <Home profile={profile} onTogether={setTogether} /> : <Join onEnter={setProfile} />}
     </ToastProvider>
+    </MotionConfig>
   )
 }

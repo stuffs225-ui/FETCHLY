@@ -36,10 +36,23 @@ const SKY_TINT = {
 
 const days = (d: number) => (d === 1 ? 'يوم' : d === 2 ? 'يومين' : d <= 10 ? `${num(d)} أيام` : `${num(d)} يومًا`)
 
-function Waves() {
+/** The swell quickens while a bottle is on its way to you, then settles. */
+function Waves({ rate }: { rate: number }) {
+  const box = useRef<HTMLDivElement>(null)
+  const cur = useRef(1)
+  useEffect(() => {
+    let raf = 0
+    const step = () => {
+      cur.current += (rate - cur.current) * 0.03
+      box.current?.getAnimations({ subtree: true }).forEach((a) => { a.playbackRate = cur.current })
+      if (Math.abs(rate - cur.current) > 0.01) raf = requestAnimationFrame(step)
+    }
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
+  }, [rate])
   const wave = 'M0 40 C 150 10, 300 70, 450 40 S 750 10, 900 40 S 1200 70, 1350 40 S 1650 10, 1800 40 V 200 H 0 Z'
   return (
-    <div dir="ltr" className="pointer-events-none absolute inset-x-0 bottom-0 h-[42%] overflow-hidden" aria-hidden>
+    <div ref={box} dir="ltr" className="pointer-events-none absolute inset-x-0 bottom-0 h-[42%] overflow-hidden" aria-hidden>
       {[
         { cls: 'animate-wave-slow opacity-60', top: '0%', fill: 'var(--sea-3)', w: '200%' },
         { cls: 'animate-wave opacity-80', top: '14%', fill: 'var(--sea-2)', w: '200%' },
@@ -180,7 +193,7 @@ export function Sea({ me, waiting, copy, onWaiting, active, fxTick }: { me: Who;
               )}
             </div>
 
-            <Waves />
+            <Waves rate={waiting > 0 ? 2.6 : 1} />
 
             {/* my bottles, sailing towards the horizon */}
             {sailing.map((s, i) => (
@@ -230,6 +243,12 @@ export function Sea({ me, waiting, copy, onWaiting, active, fxTick }: { me: Who;
                 animate={{ opacity: 0.85 }}
               >
                 <div className="relative animate-bob" style={{ animationDelay: `${-i * 2.1}s` }}>
+                  {/* the closer the opening hour, the warmer it glows */}
+                  {l.unlockAt - clock < 6 * 3_600_000 && (
+                    <span className="pointer-events-none absolute -inset-6" style={{ opacity: 0.3 + 0.6 * (1 - Math.max(0, l.unlockAt - clock) / (6 * 3_600_000)) }}>
+                      <span className="animate-breathe block h-full w-full rounded-full" style={{ background: 'radial-gradient(closest-side, var(--accent), transparent)' }} />
+                    </span>
+                  )}
                   <BottleArt tint={moodColor(l.mood)} wax="var(--accent)" glow={false} className="h-16 w-8" />
                   <Lock className="absolute start-1/2 top-[44%] h-3.5 w-3.5 -translate-x-1/2 text-white/90" />
                 </div>

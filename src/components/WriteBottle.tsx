@@ -3,6 +3,7 @@ import { Check, Image as ImageIcon, Mic, Music, Square, Trash2, Send, X } from '
 import { Sheet } from './Sheet'
 import { VoicePlayer } from './VoicePlayer'
 import { Thumb } from './Thumb'
+import { Skeleton } from './Skeleton'
 import { api } from '@/lib/api'
 import type { Copy } from '@/lib/copy'
 import { useToast } from './toastContext'
@@ -240,7 +241,7 @@ function WriteBody({ onClose, copy, onThrown }: { onClose: () => void; copy: Cop
       )}
       {picking && (
         <ul className="scroll-soft mt-3 max-h-48 space-y-2 overflow-y-auto">
-          {songs === null && <li className="py-3 text-center text-sm text-mist">…</li>}
+          {songs === null && <li className="py-1"><Skeleton rows={2} /></li>}
           {songs?.length === 0 && <li className="py-3 text-center text-sm text-mist">{copy.bottle.noSongs}</li>}
           {songs?.map((s) => (
             <li key={s.id}>

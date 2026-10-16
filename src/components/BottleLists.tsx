@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Image as ImageIcon, Mic, Music, Trash2 } from 'lucide-react'
 import { Sheet } from './Sheet'
+import { Skeleton } from './Skeleton'
 import { VoicePlayer } from './VoicePlayer'
 import { api } from '@/lib/api'
 import type { Bottle } from '@/lib/types'
@@ -41,7 +42,7 @@ function MineBody({ copy }: { copy: Copy }) {
 
   return (
     <>
-      {items === null && <p className="py-10 text-center text-sm text-mist">…</p>}
+      {items === null && <Skeleton rows={3} tall />}
       {items?.length === 0 && <p className="py-10 text-center text-sm text-mist">{copy.sea.noneMine}</p>}
       <ul className="space-y-3">
         {items?.map((b) => (

@@ -4,6 +4,7 @@ import { ExternalLink, Headphones, Heart, Music, Pencil, Plus, SkipForward, Tras
 import { HeartShape } from './Heart'
 import { AddSong } from './AddSong'
 import { Thumb, PlatformBadge } from './Thumb'
+import { Skeleton } from './Skeleton'
 import { EditSong } from './EditSong'
 import { useToast } from './toastContext'
 import { api } from '@/lib/api'
@@ -240,8 +241,31 @@ export function Songs({ me, copy, songsInfo, listen, serverNow }: Props) {
   return (
     <div className="flex h-full flex-col">
       <div className="px-5 pt-1">
-        <div className={frame ? 'hidden' : 'relative aspect-video w-full overflow-hidden rounded-2xl border border-glass-line bg-black/40'}>
+        <div className={frame ? 'hidden' : 'relative'}>
+        {/* while you listen together the screen breathes in both your colours */}
+        {session && (
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute -inset-3 rounded-[28px] blur-2xl"
+            style={{ background: 'linear-gradient(120deg, var(--heart-a), var(--heart-b))' }}
+            animate={{ opacity: [0.12, 0.42, 0.12], scale: [1, 1.03, 1] }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        )}
+        <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-glass-line bg-black/40">
           <div ref={wrap} className="absolute inset-0 [&_iframe]:h-full [&_iframe]:w-full" />
+          {/* the chosen song's cover settles in and melts into the player */}
+          {shown && !frame && (
+            <motion.img
+              key={shown.id}
+              src={shown.thumb ?? ytThumb(shown.ytId)}
+              alt=""
+              className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+              initial={{ opacity: 0, scale: 0.88 }}
+              animate={{ opacity: [0, 1, 1, 0], scale: [0.88, 1, 1, 1.04] }}
+              transition={{ duration: 1.6, times: [0, 0.25, 0.65, 1], ease: 'easeOut' }}
+            />
+          )}
           {!shown && !session && (
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 bg-night/70 text-mist">
               <Music className="h-7 w-7" />
@@ -258,6 +282,7 @@ export function Songs({ me, copy, songsInfo, listen, serverNow }: Props) {
               <ExternalLink className="h-4 w-4" /> {copy.songs.openIn(PLATFORM_NAME.youtube)}
             </a>
           )}
+        </div>
         </div>
 
         {frame && frameSrc && (
@@ -281,6 +306,11 @@ export function Songs({ me, copy, songsInfo, listen, serverNow }: Props) {
                 <span className="flex -space-x-2.5">
                   <HeartShape tone={me} className="h-5 w-[22px]" />
                   <HeartShape tone={other} className="h-5 w-[22px]" />
+                </span>
+                <span className="flex h-4 items-end gap-[3px]" aria-hidden>
+                  {[0, 1, 2, 3].map((k) => (
+                    <motion.span key={k} className="w-[3px] origin-bottom rounded-full bg-accent" style={{ height: '100%' }} animate={{ scaleY: [0.25, 1, 0.45, 0.85, 0.25] }} transition={{ duration: 1.1 + k * 0.17, repeat: Infinity, ease: 'easeInOut', delay: -k * 0.3 }} />
+                  ))}
                 </span>
                 <span className="flex-1 truncate text-sm text-ink">{copy.songs.playingTogether}</span>
                 <button onClick={stopTogether} className="rounded-xl border border-glass-line px-3.5 py-2 text-sm text-ink active:scale-95">{copy.songs.stop}</button>
@@ -325,6 +355,7 @@ export function Songs({ me, copy, songsInfo, listen, serverNow }: Props) {
       </div>
 
       <ul className="scroll-soft mt-2 flex-1 space-y-2 overflow-y-auto px-5 pb-3">
+        {songs === null && <li className="list-none"><Skeleton rows={3} /></li>}
         {songs !== null && list.length === 0 && <li className="py-10 text-center text-sm text-mist">{copy.songs.empty}</li>}
         <AnimatePresence initial={false}>
           {list.map((s) => {

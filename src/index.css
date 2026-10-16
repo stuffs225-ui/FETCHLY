@@ -54,6 +54,9 @@
   --animate-breathe: breathe 6s ease-in-out infinite;
 }
 
+/* Both touched at once: a ring of light leaves the middle between the hearts. */
+.nb-wave { opacity: 0; animation: wave-ring 3.4s ease-out both; }
+@keyframes wave-ring { from { transform: translate(-50%, -50%) scale(.4); opacity: .55; } to { transform: translate(-50%, -50%) scale(3.6); opacity: 0; } }
 @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-6px) rotate(3deg); } }
 @keyframes wave { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @keyframes breathe { 0%,100% { opacity: .6; } 50% { opacity: 1; } }

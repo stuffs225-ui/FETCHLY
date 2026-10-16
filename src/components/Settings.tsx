@@ -3,6 +3,7 @@ import { MapPin, MapPinOff, Bell, Volume2, Check, Copy, Trash2 } from 'lucide-re
 import { Sheet } from './Sheet'
 import { Trash } from './Trash'
 import { api } from '@/lib/api'
+import { vibrate } from '@/lib/prefs'
 import { HeartShape } from './Heart'
 import { copyText } from '@/lib/share'
 import type { Who } from '@/lib/types'
@@ -12,7 +13,7 @@ import type { LocStatus } from '@/lib/location'
 
 function Toggle({ on, onChange, label, hint, icon }: { on: boolean; onChange: (v: boolean) => void; label: string; hint?: string; icon: React.ReactNode }) {
   return (
-    <button onClick={() => onChange(!on)} role="switch" aria-checked={on} className="flex w-full items-center gap-4 rounded-2xl border border-glass-line bg-glass p-4 text-start transition-colors">
+    <button onClick={() => { vibrate(8); onChange(!on) }} role="switch" aria-checked={on} className="flex w-full items-center gap-4 rounded-2xl border border-glass-line bg-glass p-4 text-start transition-colors">
       <span className="text-accent-soft">{icon}</span>
       <span className="flex-1">
         <span className="block text-[15px] font-medium text-ink">{label}</span>
