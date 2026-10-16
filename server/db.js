@@ -49,6 +49,9 @@ const SCHEMA = [
   `ALTER TABLE nb_bottles ADD COLUMN IF NOT EXISTS stamp_dist DOUBLE PRECISION`,
   `ALTER TABLE nb_bottles ADD COLUMN IF NOT EXISTS photo_b64 TEXT`,
   `ALTER TABLE nb_bottles ADD COLUMN IF NOT EXISTS song_json TEXT`,
+  // Trash (schema version 5): deleting only hides; the owner can restore from Settings.
+  `ALTER TABLE nb_bottles ADD COLUMN IF NOT EXISTS deleted_at DOUBLE PRECISION`,
+  `ALTER TABLE nb_songs ADD COLUMN IF NOT EXISTS deleted_at DOUBLE PRECISION`,
   `CREATE TABLE IF NOT EXISTS nb_songs (
      id SERIAL PRIMARY KEY, author TEXT NOT NULL, yt_id TEXT NOT NULL, title TEXT NOT NULL, channel TEXT, note TEXT,
      start_sec INTEGER NOT NULL DEFAULT 0, reaction TEXT, created_at DOUBLE PRECISION NOT NULL)`,
@@ -66,7 +69,7 @@ const SCHEMA = [
 const TABLES = ['nb_settings', 'nb_slots', 'nb_presence', 'nb_locations', 'nb_together', 'nb_bottles', 'nb_songs', 'nb_events', 'nb_attempts']
 
 /** Bump when the schema/functions change so the one-time setup SQL is offered again. */
-export const SCHEMA_VERSION = '4'
+export const SCHEMA_VERSION = '5'
 const RLS_SQL = TABLES.map((t) => `ALTER TABLE ${t} ENABLE ROW LEVEL SECURITY;`)
 
 // One round trip per poll: presence, together-time, events, counts and shared state all come back in a single call.
@@ -111,12 +114,12 @@ begin
   delete from nb_attempts where since < p_now - 86400000;
 
   select count(*)::int into v_waiting from nb_bottles
-    where author = v_partner and opened_at is null
+    where author = v_partner and opened_at is null and deleted_at is null
       and (arrive_at is null or arrive_at <= p_now) and (unlock_at is null or unlock_at <= p_now);
   select coalesce(sum(seconds), 0) into v_total from nb_together;
   select coalesce((select seconds from nb_together where day = v_day), 0) into v_today;
   select jsonb_build_object('n', count(*), 'lastId', coalesce(max(id), 0),
-           'lastAuthor', (select author from nb_songs order by id desc limit 1)) into v_songs from nb_songs;
+           'lastAuthor', (select author from nb_songs where deleted_at is null order by id desc limit 1)) into v_songs from nb_songs where deleted_at is null;
 
   return jsonb_build_object(
     'presence', (select coalesce(jsonb_agg(jsonb_build_object('who', who, 'beat', beat, 'visible', visible, 'seen', seen)), '[]'::jsonb) from nb_presence),

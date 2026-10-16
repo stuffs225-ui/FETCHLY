@@ -59,9 +59,13 @@ function MineBody({ copy }: { copy: Copy }) {
             {b.kind === 'voice' && !b.audioUrl && <Mic className="h-4 w-4 text-mist" />}
             {b.photoUrl && <img src={b.photoUrl} alt="" className="mb-2 max-h-40 rounded-xl object-cover" />}
             {b.text && <p className="whitespace-pre-wrap text-[16px] leading-8 text-ink">{b.text}</p>}
-            <div className="mt-2 flex justify-end">
+            <div className="mt-2 flex items-center justify-end gap-2">
               {confirm === b.id ? (
-                <button onClick={() => remove(b.id)} className="rounded-full bg-accent/20 px-4 py-1.5 text-xs text-accent-soft">تأكيد الحذف</button>
+                <>
+                  <span className="me-auto text-xs text-mist">تنتقل إلى المحذوفات في الإعدادات</span>
+                  <button onClick={() => remove(b.id)} className="rounded-full bg-accent/20 px-4 py-1.5 text-xs text-accent-soft">تأكيد الحذف</button>
+                  <button onClick={() => setConfirm(null)} className="rounded-full border border-glass-line px-4 py-1.5 text-xs text-ink">إلغاء</button>
+                </>
               ) : (
                 <button onClick={() => setConfirm(b.id)} aria-label="حذف" className="rounded-full p-2 text-mist hover:bg-glass hover:text-ink"><Trash2 className="h-4 w-4" /></button>
               )}

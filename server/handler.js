@@ -167,7 +167,7 @@ async function ritualFields(opts, now) {
   let song = null
   const sid = Number(opts.songId)
   if (Number.isInteger(sid) && sid > 0) {
-    const r = (await q('SELECT * FROM nb_songs WHERE id = $1', [sid]))[0]
+    const r = (await q('SELECT * FROM nb_songs WHERE id = $1 AND deleted_at IS NULL', [sid]))[0]
     if (r) song = JSON.stringify({ platform: r.platform, ytId: r.yt_id, url: r.url ?? `https://www.youtube.com/watch?v=${r.yt_id}`, title: r.title, thumb: r.thumb, embed: r.embed, start: r.start_sec })
   }
   return { mood, arrive, unlock, stampMin, stampDist, song }
@@ -204,7 +204,7 @@ async function throwVoice(req, res, who, url) {
 }
 
 async function waitingFor(who, now = Date.now()) {
-  return (await q(`SELECT COUNT(*)::int AS n FROM nb_bottles WHERE author = $1 AND opened_at IS NULL AND ${AVAILABLE}`, [partnerOf(who), now]))[0].n
+  return (await q(`SELECT COUNT(*)::int AS n FROM nb_bottles WHERE author = $1 AND deleted_at IS NULL AND opened_at IS NULL AND ${AVAILABLE}`, [partnerOf(who), now]))[0].n
 }
 
 /**
@@ -215,9 +215,9 @@ async function waitingFor(who, now = Date.now()) {
  */
 async function draw(_req, res, who) {
   const now = Date.now()
-  const all = await q(`SELECT ${LIST} FROM nb_bottles WHERE author = $1 AND ${AVAILABLE}`, [partnerOf(who), now])
+  const all = await q(`SELECT ${LIST} FROM nb_bottles WHERE author = $1 AND deleted_at IS NULL AND ${AVAILABLE}`, [partnerOf(who), now])
   if (all.length === 0) {
-    const next = (await q('SELECT MIN(unlock_at) AS t FROM nb_bottles WHERE author = $1 AND opened_at IS NULL AND unlock_at > $2', [partnerOf(who), now]))[0]?.t ?? null
+    const next = (await q('SELECT MIN(unlock_at) AS t FROM nb_bottles WHERE author = $1 AND deleted_at IS NULL AND opened_at IS NULL AND unlock_at > $2', [partnerOf(who), now]))[0]?.t ?? null
     return send(res, 200, { empty: true, lockedUntil: next })
   }
   const unread = all.filter((b) => b.opened_at === null)
@@ -230,12 +230,12 @@ async function draw(_req, res, who) {
 }
 
 async function listMine(_req, res, who) {
-  const rows = await q(`SELECT ${LIST} FROM nb_bottles WHERE author = $1 ORDER BY created_at DESC`, [who])
+  const rows = await q(`SELECT ${LIST} FROM nb_bottles WHERE author = $1 AND deleted_at IS NULL ORDER BY created_at DESC`, [who])
   send(res, 200, rows.map(shape))
 }
 
 async function listKept(_req, res, who) {
-  const rows = await q(`SELECT ${LIST} FROM nb_bottles WHERE author = $1 AND opened_at IS NOT NULL ORDER BY opened_at DESC`, [partnerOf(who)])
+  const rows = await q(`SELECT ${LIST} FROM nb_bottles WHERE author = $1 AND deleted_at IS NULL AND opened_at IS NOT NULL ORDER BY opened_at DESC`, [partnerOf(who)])
   send(res, 200, rows.map(shape))
 }
 
@@ -243,12 +243,12 @@ async function listKept(_req, res, who) {
 async function seaSummary(_req, res, who) {
   const now = Date.now()
   const p = partnerOf(who)
-  const rows = await q('SELECT id, author, mood, arrive_at, unlock_at, opened_at, created_at FROM nb_bottles ORDER BY id')
+  const rows = await q('SELECT id, author, mood, arrive_at, unlock_at, opened_at, created_at FROM nb_bottles WHERE deleted_at IS NULL ORDER BY id')
   const arrived = (r) => !r.arrive_at || r.arrive_at <= now
   const inbound = rows.filter((r) => r.author === p && !r.opened_at && arrived(r) && (!r.unlock_at || r.unlock_at <= now))
   const locked = rows.filter((r) => r.author === p && !r.opened_at && arrived(r) && r.unlock_at && r.unlock_at > now)
   const mine = rows.filter((r) => r.author === who)
-  const kept = await q(`SELECT ${LIST} FROM nb_bottles WHERE author = $1 AND opened_at IS NOT NULL ORDER BY opened_at DESC LIMIT 120`, [p])
+  const kept = await q(`SELECT ${LIST} FROM nb_bottles WHERE author = $1 AND deleted_at IS NULL AND opened_at IS NOT NULL ORDER BY opened_at DESC LIMIT 120`, [p])
   send(res, 200, {
     inbound: inbound.slice(0, 8).map((r) => ({ id: r.id, mood: r.mood ?? null, author: r.author })),
     waiting: inbound.length,
@@ -261,15 +261,34 @@ async function seaSummary(_req, res, who) {
 }
 
 async function removeBottle(_req, res, who, id) {
-  const r = await q('DELETE FROM nb_bottles WHERE id = $1 AND author = $2 RETURNING id', [id, who])
+  const r = await q('UPDATE nb_bottles SET deleted_at = $3 WHERE id = $1 AND author = $2 AND deleted_at IS NULL RETURNING id', [id, who, Date.now()])
+  if (!r.length) return send(res, 404, { error: 'not_found' })
+  send(res, 204)
+}
+
+// Trash: only my own deleted things; restore or erase for good.
+async function trashList(_req, res, who) {
+  const songs = await q('SELECT * FROM nb_songs WHERE author = $1 AND deleted_at IS NOT NULL ORDER BY deleted_at DESC', [who])
+  const bottles = await q(`SELECT ${LIST}, deleted_at FROM nb_bottles WHERE author = $1 AND deleted_at IS NOT NULL ORDER BY deleted_at DESC`, [who])
+  send(res, 200, {
+    songs: songs.map((r) => ({ ...songShape(r), deletedAt: r.deleted_at })),
+    bottles: bottles.map((r) => ({ ...shape(r), deletedAt: r.deleted_at })),
+  })
+}
+
+async function trashAct(_req, res, who, kind, id, restore) {
+  const t = kind === 'songs' ? 'nb_songs' : 'nb_bottles'
+  const r = restore
+    ? await q(`UPDATE ${t} SET deleted_at = NULL WHERE id = $1 AND author = $2 AND deleted_at IS NOT NULL RETURNING id`, [id, who])
+    : await q(`DELETE FROM ${t} WHERE id = $1 AND author = $2 AND deleted_at IS NOT NULL RETURNING id`, [id, who])
   if (!r.length) return send(res, 404, { error: 'not_found' })
   send(res, 204)
 }
 
 // A photo can't be peeked at before its recipient has opened the bottle either.
 async function photo(_req, res, who, id) {
-  const r = (await q('SELECT author, photo_b64, opened_at FROM nb_bottles WHERE id = $1 AND photo_b64 IS NOT NULL', [id]))[0]
-  if (!r) return send(res, 404, { error: 'not_found' })
+  const r = (await q('SELECT author, photo_b64, opened_at, deleted_at FROM nb_bottles WHERE id = $1 AND photo_b64 IS NOT NULL', [id]))[0]
+  if (!r || (r.deleted_at !== null && r.author !== who)) return send(res, 404, { error: 'not_found' })
   if (r.author !== who && r.opened_at === null) return send(res, 403, { error: 'forbidden' })
   const buf = Buffer.from(r.photo_b64, 'base64')
   res.statusCode = 200
@@ -281,8 +300,8 @@ async function photo(_req, res, who, id) {
 
 // A voice note can't be peeked at before its recipient has drawn the bottle. Supports Range for Safari.
 async function audio(req, res, who, id) {
-  const r = (await q("SELECT author, audio_mime, audio_b64, opened_at FROM nb_bottles WHERE id = $1 AND kind = 'voice'", [id]))[0]
-  if (!r) return send(res, 404, { error: 'not_found' })
+  const r = (await q("SELECT author, audio_mime, audio_b64, opened_at, deleted_at FROM nb_bottles WHERE id = $1 AND kind = 'voice'", [id]))[0]
+  if (!r || (r.deleted_at !== null && r.author !== who)) return send(res, 404, { error: 'not_found' })
   if (r.author !== who && r.opened_at === null) return send(res, 403, { error: 'forbidden' })
   const buf = Buffer.from(r.audio_b64, 'base64')
   res.setHeader('Content-Type', r.audio_mime)
@@ -446,7 +465,7 @@ async function songAdd(req, res, who) {
 }
 
 async function songList(_req, res) {
-  send(res, 200, (await q('SELECT * FROM nb_songs ORDER BY id DESC LIMIT 200')).map(songShape))
+  send(res, 200, (await q('SELECT * FROM nb_songs WHERE deleted_at IS NULL ORDER BY id DESC LIMIT 200')).map(songShape))
 }
 
 // Only the person who added a link can change or delete it.
@@ -454,13 +473,13 @@ async function songEdit(req, res, who, id) {
   const body = await readJson(req)
   const note = String(body.note ?? '').trim().slice(0, 140) || null
   const start = Number.isFinite(Number(body.start)) ? Math.max(0, Math.min(Math.round(Number(body.start)), 36000)) : 0
-  const r = await q("UPDATE nb_songs SET note = $1, start_sec = CASE WHEN platform = 'youtube' THEN $2 ELSE 0 END WHERE id = $3 AND author = $4 RETURNING *", [note, start, id, who])
+  const r = await q("UPDATE nb_songs SET note = $1, start_sec = CASE WHEN platform = 'youtube' THEN $2 ELSE 0 END WHERE id = $3 AND author = $4 AND deleted_at IS NULL RETURNING *", [note, start, id, who])
   if (!r.length) return send(res, 404, { error: 'not_found' })
   send(res, 200, songShape(r[0]))
 }
 
 async function songRemove(_req, res, who, id) {
-  const r = await q('DELETE FROM nb_songs WHERE id = $1 AND author = $2 RETURNING id', [id, who])
+  const r = await q('UPDATE nb_songs SET deleted_at = $3 WHERE id = $1 AND author = $2 AND deleted_at IS NULL RETURNING id', [id, who, Date.now()])
   if (!r.length) return send(res, 404, { error: 'not_found' })
   const l = parseListen(await getSetting('listen'))
   if (l && l.songId === id) await setSetting('listen', 'null')
@@ -498,7 +517,7 @@ function listenView(raw, now) {
 
 async function listenInvite(req, res, who) {
   const id = Number((await readJson(req)).songId)
-  const s = (await q("SELECT * FROM nb_songs WHERE id = $1 AND platform = 'youtube' AND embed", [id]))[0]
+  const s = (await q("SELECT * FROM nb_songs WHERE id = $1 AND platform = 'youtube' AND embed AND deleted_at IS NULL", [id]))[0]
   if (!s) return send(res, 404, { error: 'not_found' })
   await setSetting('listen', JSON.stringify({ status: 'invite', host: who, songId: s.id, ytId: s.yt_id, title: s.title, startSec: s.start_sec, createdAt: Date.now() }))
   send(res, 204)
@@ -625,6 +644,11 @@ export async function handle(req, res) {
     if (bm && bm[2] === '/audio' && m === 'GET') return await audio(req, res, who, Number(bm[1]))
     if (bm && bm[2] === '/photo' && m === 'GET') return await photo(req, res, who, Number(bm[1]))
     if (bm && !bm[2] && m === 'DELETE') return await removeBottle(req, res, who, Number(bm[1]))
+
+    if (path === '/api/trash' && m === 'GET') return await trashList(req, res, who)
+    const tm = /^\/api\/trash\/(songs|bottles)\/(\d+)(\/restore)?$/.exec(path)
+    if (tm && tm[3] && m === 'POST') return await trashAct(req, res, who, tm[1], Number(tm[2]), true)
+    if (tm && !tm[3] && m === 'DELETE') return await trashAct(req, res, who, tm[1], Number(tm[2]), false)
 
     send(res, 404, { error: 'not_found' })
   } catch (err) {

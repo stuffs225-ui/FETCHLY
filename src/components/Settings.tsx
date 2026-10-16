@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { MapPin, MapPinOff, Bell, Volume2, Check, Copy } from 'lucide-react'
+import { MapPin, MapPinOff, Bell, Volume2, Check, Copy, Trash2 } from 'lucide-react'
 import { Sheet } from './Sheet'
+import { Trash } from './Trash'
 import { api } from '@/lib/api'
 import { HeartShape } from './Heart'
 import { copyText } from '@/lib/share'
@@ -44,6 +45,7 @@ export function Settings({ open, onClose, sound, setSound, chimeOn, setChimeOn, 
   useEffect(() => {
     if (open) api.get<{ code: string | null }>('/invite').then((r) => setInvite(r.code)).catch(() => {})
   }, [open])
+  const [trash, setTrash] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
   const [done, setDone] = useState(false)
   const resetPartner = async () => {
@@ -53,6 +55,7 @@ export function Settings({ open, onClose, sound, setSound, chimeOn, setChimeOn, 
     setTimeout(() => setDone(false), 4000)
   }
   return (
+    <>
     <Sheet open={open} onClose={onClose} title="الإعدادات">
       <div className="space-y-3">
         <div className="rounded-2xl border border-glass-line bg-glass p-4">
@@ -98,6 +101,11 @@ export function Settings({ open, onClose, sound, setSound, chimeOn, setChimeOn, 
           </div>
         )}
 
+        <button onClick={() => setTrash(true)} className="flex w-full items-center gap-4 rounded-2xl border border-glass-line bg-glass p-4 text-start active:scale-[0.99]">
+          <span className="text-accent-soft"><Trash2 className="h-5 w-5" /></span>
+          <span className="flex-1 text-[15px] font-medium text-ink">المحذوفات</span>
+        </button>
+
         <div className="rounded-2xl border border-glass-line bg-glass p-4">
           <div className="flex items-center justify-between gap-3">
             <span className="flex items-center gap-2.5 text-[15px] font-medium text-ink">
@@ -117,5 +125,7 @@ export function Settings({ open, onClose, sound, setSound, chimeOn, setChimeOn, 
         </div>
       </div>
     </Sheet>
+    <Trash open={trash} onClose={() => setTrash(false)} />
+    </>
   )
 }

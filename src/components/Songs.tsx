@@ -33,6 +33,7 @@ export function Songs({ me, copy, songsInfo, listen, serverNow }: Props) {
   const [current, setCurrent] = useState<Song | null>(null)
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<Song | null>(null)
+  const [confirmDel, setConfirmDel] = useState<number | null>(null)
   const [ready, setReady] = useState(false)
   const [playing, setPlaying] = useState(false)
   const [needTap, setNeedTap] = useState(false)
@@ -215,6 +216,8 @@ export function Songs({ me, copy, songsInfo, listen, serverNow }: Props) {
   }
 
   const remove = async (s: Song) => {
+    setConfirmDel(null)
+    toast('انتقلت إلى المحذوفات (من الإعدادات)')
     setSongs((list) => list?.filter((x) => x.id !== s.id) ?? null)
     if (current?.id === s.id) {
       player.current?.pauseVideo()
@@ -358,7 +361,14 @@ export function Songs({ me, copy, songsInfo, listen, serverNow }: Props) {
                   <span className="flex flex-col items-center">
                     {s.reaction === 'heart' && <Heart className="h-4 w-4 fill-accent text-accent" />}
                     <button onClick={() => setEditing(s)} aria-label="تعديل" className="rounded-full p-2 text-mist active:scale-90"><Pencil className="h-4 w-4" /></button>
-                    <button onClick={() => remove(s)} aria-label="حذف" className="rounded-full p-2 text-mist active:scale-90"><Trash2 className="h-4 w-4" /></button>
+                    {confirmDel === s.id ? (
+                      <span className="flex flex-col items-center gap-1.5 py-1">
+                        <button onClick={() => remove(s)} className="rounded-full bg-accent/20 px-3 py-1 text-[11px] font-bold text-accent-soft">احذف</button>
+                        <button onClick={() => setConfirmDel(null)} className="px-2 text-[11px] text-mist">إلغاء</button>
+                      </span>
+                    ) : (
+                      <button onClick={() => setConfirmDel(s.id)} aria-label="حذف" className="rounded-full p-2 text-mist active:scale-90"><Trash2 className="h-4 w-4" /></button>
+                    )}
                   </span>
                 ) : (
                   <button onClick={() => toggleHeart(s)} aria-label="قلب" className="rounded-full p-2.5 active:scale-90">
