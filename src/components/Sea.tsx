@@ -11,7 +11,7 @@ import type { Bottle } from '@/lib/types'
 import type { Copy } from '@/lib/copy'
 import { num } from '@/lib/time'
 import { useShake } from '@/lib/shake'
-import { useToast } from './Toast'
+import { useToast } from './toastContext'
 
 type DrawResponse = { empty: true } | { bottle: Bottle; fresh: boolean; waiting: number }
 

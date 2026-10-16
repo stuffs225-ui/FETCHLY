@@ -11,16 +11,21 @@ type Mode = 'mine' | 'kept'
 
 /** Two quiet lists: what I threw into the sea, and the notes I've kept from them. */
 export function BottleLists({ mode, onClose, copy }: { mode: Mode | null; onClose: () => void; copy: Copy }) {
+  const [last, setLast] = useState<Mode>('mine')
+  if (mode && mode !== last) setLast(mode)
+  const active = mode ?? last
+  return (
+    <Sheet open={mode !== null} onClose={onClose} title={active === 'mine' ? copy.sea.mine : copy.sea.kept}>
+      {mode && <ListBody key={mode} mode={mode} copy={copy} />}
+    </Sheet>
+  )
+}
+
+function ListBody({ mode, copy }: { mode: Mode; copy: Copy }) {
   const [items, setItems] = useState<Bottle[] | null>(null)
   const [confirm, setConfirm] = useState<number | null>(null)
-  const [last, setLast] = useState<Mode>('mine')
-  const active = mode ?? last
 
   useEffect(() => {
-    if (!mode) return
-    setLast(mode)
-    setItems(null)
-    setConfirm(null)
     api.get<Bottle[]>(`/bottles/${mode}`).then(setItems).catch(() => setItems([]))
   }, [mode])
 
@@ -30,8 +35,9 @@ export function BottleLists({ mode, onClose, copy }: { mode: Mode | null; onClos
     setConfirm(null)
   }
 
+  const active = mode
   return (
-    <Sheet open={mode !== null} onClose={onClose} title={active === 'mine' ? copy.sea.mine : copy.sea.kept}>
+    <>
       {items === null && <p className="py-10 text-center text-sm text-mist">…</p>}
       {items?.length === 0 && <p className="py-10 text-center text-sm text-mist">{active === 'mine' ? copy.sea.noneMine : copy.sea.noneKept}</p>}
       <ul className="space-y-3">
@@ -58,6 +64,6 @@ export function BottleLists({ mode, onClose, copy }: { mode: Mode | null; onClos
           </li>
         ))}
       </ul>
-    </Sheet>
+    </>
   )
 }

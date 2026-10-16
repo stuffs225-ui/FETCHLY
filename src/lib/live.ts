@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { api } from './api'
-import type { DistanceInfo, PState, Together } from './types'
+import { api, ApiError } from './api'
+import type { DistanceInfo, Listen, PState, Song, SongsInfo, Together } from './types'
+
+export interface Fatal {
+  sql: string
+  dashboard: string
+}
 
 export interface LiveState {
   connected: boolean
@@ -8,12 +13,17 @@ export interface LiveState {
   together: Together
   waiting: number
   distance: DistanceInfo
+  songs: SongsInfo
+  listen: Listen | null
+  /** The database needs its one-time setup SQL (again). */
+  fatal: Fatal | null
 }
 
 interface Handlers {
   onRipple: () => void
   onOpened: () => void
   onNewBottle: () => void
+  onNewSong: (info: SongsInfo) => void
   onPartnerState: (next: PState, prev: PState) => void
 }
 
@@ -24,15 +34,19 @@ interface SyncResponse {
   events: string[]
   distance: DistanceInfo
   together: Together
+  songs: SongsInfo
+  listen: Listen | null
 }
 
 const FAST = 2500 // both here: feels live
 const SLOW = 6000 // alone: keeps the cost down but still notices arrivals quickly
 
+export type { Song }
+
 /**
  * Presence by lightweight polling (works on serverless hosting where there are no
  * persistent sockets). Each poll also measures the clock offset to the server, so
- * both phones can still beat on the exact same instant.
+ * both phones can still beat — and listen — on the exact same instant.
  */
 export function useLive(handlers: Handlers) {
   const [state, setState] = useState<LiveState>({
@@ -41,13 +55,18 @@ export function useLive(handlers: Handlers) {
     together: { total: 0, today: 0 },
     waiting: 0,
     distance: { meters: null, precise: false, at: { a: null, b: null }, closestToday: null },
+    songs: { n: 0, lastId: 0, lastAuthor: null },
+    listen: null,
+    fatal: null,
   })
   const hRef = useRef(handlers)
-  hRef.current = handlers
+  useEffect(() => {
+    hRef.current = handlers
+  })
   const offset = useRef(0)
   const waitingRef = useRef<number | null>(null)
   const partnerRef = useRef<PState | null>(null)
-  const kick = useRef<() => void>(() => {})
+  const songRef = useRef<number | null>(null)
 
   const serverNow = useCallback(() => Date.now() + offset.current, [])
 
@@ -76,7 +95,12 @@ export function useLive(handlers: Handlers) {
         partnerRef.current = r.partner.state
         if (waitingRef.current !== null && r.waiting > waitingRef.current) hRef.current.onNewBottle()
         waitingRef.current = r.waiting
-        setState({ connected: true, partner: r.partner, together: r.together, waiting: r.waiting, distance: r.distance })
+        if (songRef.current !== null && r.songs.lastId > songRef.current) hRef.current.onNewSong(r.songs)
+        songRef.current = r.songs.lastId
+        setState({
+          connected: true, partner: r.partner, together: r.together, waiting: r.waiting,
+          distance: r.distance, songs: r.songs, listen: r.listen, fatal: null,
+        })
 
         for (const e of r.events) {
           if (e === 'ripple') hRef.current.onRipple()
@@ -84,9 +108,14 @@ export function useLive(handlers: Handlers) {
         }
         if (prevPartner !== null && prevPartner !== r.partner.state) hRef.current.onPartnerState(r.partner.state, prevPartner)
         nextDelay = r.partner.state === 'here' ? FAST : SLOW
-      } catch {
-        setState((s) => ({ ...s, connected: false }))
-        nextDelay = 4000
+      } catch (e) {
+        if (e instanceof ApiError && e.message === 'schema_missing' && e.extra?.sql) {
+          setState((s) => ({ ...s, connected: false, fatal: { sql: e.extra!.sql!, dashboard: e.extra!.dashboard ?? 'https://supabase.com/dashboard' } }))
+          nextDelay = 8000
+        } else {
+          setState((s) => ({ ...s, connected: false }))
+          nextDelay = 4000
+        }
       } finally {
         busy = false
         // A hidden page stops polling entirely; it resumes (and says so) when shown again.
@@ -99,7 +128,6 @@ export function useLive(handlers: Handlers) {
       void run() // tells the server immediately whether we are looking or not
     }
 
-    kick.current = () => void run()
     void run()
     document.addEventListener('visibilitychange', onVisibility)
     return () => {

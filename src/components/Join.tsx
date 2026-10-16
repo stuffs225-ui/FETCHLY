@@ -32,6 +32,7 @@ export function Join({ onEnter }: { onEnter: (p: Profile) => void }) {
     try { const v = localStorage.getItem(SAVED); return v === 'a' || v === 'b' ? v : null } catch { return null }
   })
   const [password, setPassword] = useState('')
+  const [invite, setInvite] = useState('')
   const [show, setShow] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -43,6 +44,8 @@ export function Join({ onEnter }: { onEnter: (p: Profile) => void }) {
 
   const copy = makeCopy({ who: who ?? 'a', partner: who === 'b' ? 'a' : 'b' })
   const needsCode = who !== null && slots !== null && !slots[who]
+  // The second person to arrive also needs the invite code the first one was given.
+  const needsInvite = needsCode && who !== null && slots !== null && slots[who === 'a' ? 'b' : 'a']
 
   const choose = (w: Who) => {
     setWho(w)
@@ -54,14 +57,15 @@ export function Join({ onEnter }: { onEnter: (p: Profile) => void }) {
     e.preventDefault()
     if (!who || busy) return
     if (needsCode && password.length < 4) { setError(copy.join.short); setShake((s) => s + 1); return }
+    if (needsInvite && invite.trim().length < 6) { setError(copy.join.badInvite); setShake((s) => s + 1); return }
     setBusy(true)
     setError('')
     try {
-      const p = await api.post<Profile>('/join', { who, password })
+      const p = await api.post<Profile>('/join', { who, password, invite: needsInvite ? invite.trim() : undefined })
       try { localStorage.setItem(SAVED, who) } catch { /* ignore */ }
       onEnter(p)
     } catch (err) {
-      setError(err instanceof ApiError && err.status === 429 ? copy.join.tooMany : copy.join.wrong)
+      setError(err instanceof ApiError && err.status === 429 ? copy.join.tooMany : err instanceof ApiError && err.message === 'bad_invite' ? copy.join.badInvite : copy.join.wrong)
       setShake((s) => s + 1)
       setBusy(false)
     }
@@ -115,6 +119,17 @@ export function Join({ onEnter }: { onEnter: (p: Profile) => void }) {
             </motion.div>
           ) : (
             <motion.form key="code" onSubmit={submit} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }} className="mt-9 w-full max-w-xs">
+              {needsInvite && (
+                <input
+                  value={invite}
+                  onChange={(e) => setInvite(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder={copy.join.invite}
+                  inputMode="numeric"
+                  dir="ltr"
+                  autoFocus
+                  className="glass mb-3 w-full rounded-2xl px-5 py-3.5 text-center tracking-[0.3em] text-ink outline-none transition-colors placeholder:tracking-normal placeholder:text-mist/60 focus:border-accent/50"
+                />
+              )}
               <motion.div key={shake} animate={shake ? { x: [0, -7, 7, -5, 5, 0] } : {}} transition={{ duration: 0.4 }} className="relative">
                 <input
                   type={show ? 'text' : 'password'}
@@ -122,7 +137,7 @@ export function Join({ onEnter }: { onEnter: (p: Profile) => void }) {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={needsCode ? copy.join.chooseHint : copy.join.placeholder}
                   autoComplete={needsCode ? 'new-password' : 'current-password'}
-                  autoFocus
+                  autoFocus={!needsInvite}
                   className="glass w-full rounded-2xl px-5 py-3.5 pe-12 text-center text-ink outline-none transition-colors placeholder:text-mist/60 focus:border-accent/50"
                 />
                 <button type="button" onClick={() => setShow((v) => !v)} aria-label="إظهار" className="absolute end-3 top-1/2 -translate-y-1/2 p-2 text-mist">

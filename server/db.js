@@ -41,17 +41,82 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS nb_bottles (
      id SERIAL PRIMARY KEY, author TEXT NOT NULL, kind TEXT NOT NULL, body TEXT, audio_mime TEXT, audio_b64 TEXT,
      created_at DOUBLE PRECISION NOT NULL, opened_at DOUBLE PRECISION, opened_count INTEGER NOT NULL DEFAULT 0)`,
+  `CREATE TABLE IF NOT EXISTS nb_songs (
+     id SERIAL PRIMARY KEY, author TEXT NOT NULL, yt_id TEXT NOT NULL, title TEXT NOT NULL, channel TEXT, note TEXT,
+     start_sec INTEGER NOT NULL DEFAULT 0, reaction TEXT, created_at DOUBLE PRECISION NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS nb_events (id SERIAL PRIMARY KEY, to_who TEXT NOT NULL, kind TEXT NOT NULL, created DOUBLE PRECISION NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS nb_attempts (key TEXT PRIMARY KEY, count INTEGER NOT NULL, since DOUBLE PRECISION NOT NULL)`,
 ]
 
 // Supabase exposes public-schema tables to the (public) anon key unless row-level security is on.
 // With RLS enabled and no policies, only the server's secret key can touch these tables.
-const TABLES = ['nb_settings', 'nb_slots', 'nb_presence', 'nb_locations', 'nb_together', 'nb_bottles', 'nb_events', 'nb_attempts']
+const TABLES = ['nb_settings', 'nb_slots', 'nb_presence', 'nb_locations', 'nb_together', 'nb_bottles', 'nb_songs', 'nb_events', 'nb_attempts']
+
+/** Bump when the schema/functions change so the one-time setup SQL is offered again. */
+export const SCHEMA_VERSION = '2'
 const RLS_SQL = TABLES.map((t) => `ALTER TABLE ${t} ENABLE ROW LEVEL SECURITY;`)
 
+// One round trip per poll: presence, together-time, events, counts and shared state all come back in a single call.
+const SYNC_FN = `create or replace function public.nb_sync(p_who text, p_visible boolean, p_now double precision) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  v_partner text := case when p_who = 'a' then 'b' else 'a' end;
+  v_a nb_presence%rowtype;
+  v_b nb_presence%rowtype;
+  v_here_a boolean := false;
+  v_here_b boolean := false;
+  v_tg double precision;
+  v_day text := to_char(to_timestamp(p_now / 1000.0) at time zone 'UTC', 'YYYY-MM-DD');
+  v_events jsonb;
+  v_waiting int;
+  v_total double precision;
+  v_today double precision;
+  v_songs jsonb;
+begin
+  insert into nb_presence (who, beat, visible, seen) values (p_who, p_now, p_visible, p_now)
+    on conflict (who) do update set beat = excluded.beat, visible = excluded.visible, seen = excluded.seen;
+
+  select * into v_a from nb_presence where who = 'a';
+  v_here_a := found and v_a.visible and p_now - v_a.beat < 15000;
+  select * into v_b from nb_presence where who = 'b';
+  v_here_b := found and v_b.visible and p_now - v_b.beat < 15000;
+
+  if v_here_a and v_here_b then
+    select value::double precision into v_tg from nb_settings where key = 'tg';
+    if v_tg is not null and p_now - v_tg <= 7000 then
+      insert into nb_together (day, seconds) values (v_day, (p_now - v_tg) / 1000.0)
+        on conflict (day) do update set seconds = nb_together.seconds + excluded.seconds;
+    end if;
+    insert into nb_settings (key, value) values ('tg', trunc(p_now)::bigint::text)
+      on conflict (key) do update set value = excluded.value;
+  end if;
+
+  with d as (delete from nb_events where to_who = p_who returning kind)
+  select coalesce(jsonb_agg(kind), '[]'::jsonb) into v_events from d;
+
+  delete from nb_events where created < p_now - 259200000;
+  delete from nb_attempts where since < p_now - 86400000;
+
+  select count(*)::int into v_waiting from nb_bottles where author = v_partner and opened_at is null;
+  select coalesce(sum(seconds), 0) into v_total from nb_together;
+  select coalesce((select seconds from nb_together where day = v_day), 0) into v_today;
+  select jsonb_build_object('n', count(*), 'lastId', coalesce(max(id), 0),
+           'lastAuthor', (select author from nb_songs order by id desc limit 1)) into v_songs from nb_songs;
+
+  return jsonb_build_object(
+    'presence', (select coalesce(jsonb_agg(jsonb_build_object('who', who, 'beat', beat, 'visible', visible, 'seen', seen)), '[]'::jsonb) from nb_presence),
+    'waiting', v_waiting,
+    'events', v_events,
+    'distance', (select value from nb_settings where key = 'distance'),
+    'listen', (select value from nb_settings where key = 'listen'),
+    'total', v_total,
+    'today', v_today,
+    'songs', v_songs
+  );
+end $$`
+
 const FUNCTIONS_SQL = `
--- Two small helper functions so the server can talk to this database using only the project API key.
+-- Helper functions so the server can talk to this database using only the project API key.
 -- They can be called ONLY with the secret service-role key (never from the browser).
 create or replace function public.nb_read(query text) returns jsonb
 language plpgsql security definer set search_path = public as $$
@@ -67,11 +132,15 @@ begin
   execute query;
 end $$;
 
+${SYNC_FN};
+
 do $$ begin
   if exists (select 1 from pg_roles where rolname = 'service_role') then
-    revoke all on nb_settings, nb_slots, nb_presence, nb_locations, nb_together, nb_bottles, nb_events, nb_attempts from anon, authenticated;
+    revoke all on nb_settings, nb_slots, nb_presence, nb_locations, nb_together, nb_bottles, nb_songs, nb_events, nb_attempts from anon, authenticated;
     revoke all on function public.nb_read(text) from public, anon, authenticated;
     revoke all on function public.nb_exec(text) from public, anon, authenticated;
+    revoke all on function public.nb_sync(text, boolean, double precision) from public, anon, authenticated;
+    grant execute on function public.nb_sync(text, boolean, double precision) to service_role;
     grant execute on function public.nb_read(text) to service_role;
     grant execute on function public.nb_exec(text) to service_role;
   end if;
@@ -79,7 +148,7 @@ end $$;
 
 notify pgrst, 'reload schema';`
 
-export const SETUP_SQL = `-- نبضنا: إعداد لمرة واحدة (آمن، لا يلمس جداولك الأخرى — كل أسماء الجداول تبدأ بـ nb_)\n${SCHEMA.map((s) => s.replace(/\s*\n\s*/g, ' ') + ';').join('\n')}\n${RLS_SQL.join('\n')}\n${FUNCTIONS_SQL}\n`
+export const SETUP_SQL = `-- نبضنا: إعداد لمرة واحدة (آمن، لا يلمس جداولك الأخرى — كل أسماء الجداول تبدأ بـ nb_)\n${SCHEMA.map((s) => s.replace(/\s*\n\s*/g, ' ') + ';').join('\n')}\n${RLS_SQL.join('\n')}\n${FUNCTIONS_SQL}\ninsert into nb_settings (key, value) values ('schemaVersion', '${SCHEMA_VERSION}') on conflict (key) do update set value = excluded.value;\n`
 
 /** Inline parameters as safely-escaped literals (the REST bridge executes plain SQL text). */
 function inline(text, params) {
@@ -91,7 +160,7 @@ function inline(text, params) {
       if (!Number.isFinite(v)) throw new Error('bad_number')
       return String(v)
     }
-    return `'${String(v).replace(/\u0000/g, '').replace(/'/g, "''")}'`
+    return `'${String(v).replaceAll('\u0000', '').replace(/'/g, "''")}'`
   })
 }
 
@@ -183,8 +252,13 @@ function db() {
     const d = await open()
     try {
       // Over the REST bridge the tables come from the one-time setup SQL; just verify it was run.
-      if (d.rest) await d.query('SELECT key FROM nb_settings LIMIT 1')
-      else for (const stmt of [...SCHEMA, ...RLS_SQL]) await d.query(stmt)
+      if (d.rest) {
+        const v = await d.query("SELECT value FROM nb_settings WHERE key = 'schemaVersion'")
+        if (v[0]?.value !== SCHEMA_VERSION) throw new SchemaMissingError(d.ref)
+      } else {
+        for (const stmt of [...SCHEMA, ...RLS_SQL, SYNC_FN]) await d.query(stmt)
+        await d.query("INSERT INTO nb_settings (key, value) VALUES ('schemaVersion', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", [SCHEMA_VERSION])
+      }
     } catch (err) {
       if (err instanceof SchemaMissingError) throw err
       throw new DatabaseUnavailableError(err)

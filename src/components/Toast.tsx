@@ -1,10 +1,9 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 
-type ToastFn = (message: string) => void
-const ToastContext = createContext<ToastFn>(() => {})
-export const useToast = () => useContext(ToastContext)
+import { ToastContext } from './toastContext'
+import type { ToastFn } from './toastContext'
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<{ id: number; message: string }[]>([])

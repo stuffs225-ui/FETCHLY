@@ -5,7 +5,9 @@ type MotionCtor = typeof DeviceMotionEvent & { requestPermission?: () => Promise
 /** Calls `onShake` when the phone is shaken. iOS asks for permission, which must come from a tap. */
 export function useShake(active: boolean, onShake: () => void) {
   const cb = useRef(onShake)
-  cb.current = onShake
+  useEffect(() => {
+    cb.current = onShake
+  })
   const supported = typeof window !== 'undefined' && 'DeviceMotionEvent' in window
   const needsPermission = supported && typeof (window.DeviceMotionEvent as MotionCtor).requestPermission === 'function'
   const [granted, setGranted] = useState(!needsPermission)

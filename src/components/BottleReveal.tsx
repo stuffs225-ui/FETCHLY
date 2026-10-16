@@ -15,17 +15,16 @@ export type RevealState =
 
 /** Full-screen moment: the bottle rattles, the cork pops, the note unrolls. */
 export function BottleReveal({ state, copy, onClose, onReply }: { state: RevealState | null; copy: Copy; onClose: () => void; onReply: () => void }) {
-  const [unrolled, setUnrolled] = useState(false)
-  const phase = state?.phase
+  const openId = state?.phase === 'open' ? state.bottle.id : null
+  const [unrolledId, setUnrolledId] = useState<number | null>(null)
+  const unrolled = openId !== null && unrolledId === openId
 
   useEffect(() => {
-    setUnrolled(false)
-    if (phase === 'open') {
-      vibrate([20, 50, 20])
-      const t = setTimeout(() => setUnrolled(true), 650)
-      return () => clearTimeout(t)
-    }
-  }, [phase, state && 'bottle' in state ? state.bottle.id : 0])
+    if (openId === null) return
+    vibrate([20, 50, 20])
+    const t = setTimeout(() => setUnrolledId(openId), 650)
+    return () => clearTimeout(t)
+  }, [openId])
 
   const words = state?.phase === 'open' && state.bottle.text ? state.bottle.text.split(/(\s+)/) : []
   const animateWords = words.length <= 80

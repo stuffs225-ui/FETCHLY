@@ -1,8 +1,9 @@
-import { useState } from 'react'
-import { MapPin, MapPinOff, Smartphone, Volume2, Check } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { MapPin, MapPinOff, Bell, Volume2, Check, Copy } from 'lucide-react'
 import { Sheet } from './Sheet'
 import { api } from '@/lib/api'
 import { HeartShape } from './Heart'
+import { copyText } from '@/lib/share'
 import type { Who } from '@/lib/types'
 import { THEMES } from '@/lib/theme'
 import type { ThemeKey } from '@/lib/theme'
@@ -26,18 +27,23 @@ function Toggle({ on, onChange, label, hint, icon }: { on: boolean; onChange: (v
 interface Props {
   open: boolean
   onClose: () => void
-  haptics: boolean
-  setHaptics: (v: boolean) => void
   sound: boolean
   setSound: (v: boolean) => void
+  chimeOn: boolean
+  setChimeOn: (v: boolean) => void
   theme: ThemeKey
   setTheme: (k: ThemeKey) => void
   loc: { status: LocStatus; enable: () => void; disable: () => void }
   partner: Who
 }
 
-export function Settings({ open, onClose, haptics, setHaptics, sound, setSound, theme, setTheme, loc, partner }: Props) {
+export function Settings({ open, onClose, sound, setSound, chimeOn, setChimeOn, theme, setTheme, loc, partner }: Props) {
   const locOn = loc.status === 'on'
+  const [invite, setInvite] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+  useEffect(() => {
+    if (open) api.get<{ code: string }>('/invite').then((r) => setInvite(r.code)).catch(() => {})
+  }, [open])
   const [confirmReset, setConfirmReset] = useState(false)
   const [done, setDone] = useState(false)
   const resetPartner = async () => {
@@ -74,8 +80,23 @@ export function Settings({ open, onClose, haptics, setHaptics, sound, setSound, 
             icon={locOn ? <MapPin className="h-5 w-5" /> : <MapPinOff className="h-5 w-5" />}
           />
         )}
-        <Toggle on={haptics} onChange={setHaptics} label="اهتزاز النبض" icon={<Smartphone className="h-5 w-5" />} />
+        <Toggle on={chimeOn} onChange={(v) => { if (v) void import('@/lib/sound').then((m) => { m.unlockSound(); m.chime() }); setChimeOn(v) }} label="نغمة عند اللمس والرسائل" icon={<Bell className="h-5 w-5" />} />
         <Toggle on={sound} onChange={(v) => { if (v) void import('@/lib/sound').then((m) => m.unlockSound()); setSound(v) }} label="صوت النبض" icon={<Volume2 className="h-5 w-5" />} />
+
+        {invite && (
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-glass-line bg-glass p-4">
+            <div>
+              <p className="text-xs text-mist">رمز الدعوة</p>
+              <p dir="ltr" className="mt-0.5 select-all text-start text-xl font-bold tracking-[0.25em] text-ink">{invite}</p>
+            </div>
+            <button
+              onClick={async () => { if (await copyText(invite)) { setCopied(true); setTimeout(() => setCopied(false), 2000) } }}
+              className="flex items-center gap-1.5 rounded-xl border border-glass-line px-3.5 py-2 text-sm text-ink active:scale-95"
+            >
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} {copied ? 'تم' : 'نسخ'}
+            </button>
+          </div>
+        )}
 
         <div className="rounded-2xl border border-glass-line bg-glass p-4">
           <div className="flex items-center justify-between gap-3">

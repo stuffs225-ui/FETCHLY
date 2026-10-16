@@ -29,7 +29,6 @@ interface Props {
   connected: boolean
   serverNow: () => number
   rippleTick: number
-  haptics: boolean
   sound: boolean
   distance: DistanceInfo
   onTouchPartner: () => void
@@ -41,20 +40,24 @@ interface Ring { id: number; i: 0 | 1 }
  * Two hearts. Their gap on screen is the real distance between you. Whenever
  * you are both here, they lock onto the server clock and beat as one.
  */
-export function HeartStage({ me, partnerState, connected, serverNow, rippleTick, haptics, sound, distance, onTouchPartner }: Props) {
+export function HeartStage({ me, partnerState, connected, serverNow, rippleTick, sound, distance, onTouchPartner }: Props) {
   const together = connected && partnerState === 'here'
   const partner: Who = me === 'a' ? 'b' : 'a'
 
   const heartEls = useRef<(HTMLDivElement | null)[]>([null, null])
   const glowEls = useRef<(HTMLDivElement | null)[]>([null, null])
   const sim = useRef({ phase: [0.05, 0.55], bpm: [BASE_BPM[me], BASE_BPM[partner]], excite: [0, 0], beats: [0, 0], last: 0 })
-  const live = useRef({ together, partnerState, connected, haptics, sound, me, partner, serverNow })
-  live.current = { together, partnerState, connected, haptics, sound, me, partner, serverNow }
+  const live = useRef({ together, partnerState, connected, sound, me, partner, serverNow })
+  useEffect(() => {
+    live.current = { together, partnerState, connected, sound, me, partner, serverNow }
+  })
 
   const [rings, setRings] = useState<Ring[]>([])
   const ringSeq = useRef(0)
   const spawnRef = useRef<(i: 0 | 1) => void>(() => {})
-  spawnRef.current = (i) => setRings((r) => [...r.slice(-4), { id: ++ringSeq.current, i }])
+  useEffect(() => {
+    spawnRef.current = (i) => setRings((r) => [...r.slice(-4), { id: ++ringSeq.current, i }])
+  }, [])
 
   const wasTogether = useRef(false)
   useEffect(() => {
@@ -99,7 +102,6 @@ export function HeartStage({ me, partnerState, connected, serverNow, rippleTick,
             spawnRef.current(i)
             if (i === 0) {
               if (L.sound) heartbeatSound()
-              if (L.haptics && L.together) vibrate([14, 70, 22])
             }
           }
         }

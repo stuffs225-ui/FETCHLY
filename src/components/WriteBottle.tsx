@@ -4,7 +4,7 @@ import { Sheet } from './Sheet'
 import { VoicePlayer } from './VoicePlayer'
 import { api } from '@/lib/api'
 import type { Copy } from '@/lib/copy'
-import { useToast } from './Toast'
+import { useToast } from './toastContext'
 import { clock } from '@/lib/time'
 
 const MAX = 600
@@ -17,6 +17,14 @@ function pickMime() {
 
 /** Write a note (and/or record your voice) and let it drift into the sea. */
 export function WriteBottle({ open, onClose, copy, onThrown }: { open: boolean; onClose: () => void; copy: Copy; onThrown: () => void }) {
+  return (
+    <Sheet open={open} onClose={onClose} title={copy.sea.writeTitle}>
+      <WriteBody onClose={onClose} copy={copy} onThrown={onThrown} />
+    </Sheet>
+  )
+}
+
+function WriteBody({ onClose, copy, onThrown }: { onClose: () => void; copy: Copy; onThrown: () => void }) {
   const toast = useToast()
   const [text, setText] = useState('')
   const [rec, setRec] = useState<'idle' | 'recording' | 'done'>('idle')
@@ -34,18 +42,15 @@ export function WriteBottle({ open, onClose, copy, onThrown }: { open: boolean; 
     stream.current = null
   }
 
-  const reset = () => {
+  // The sheet unmounts this body when it closes, so leaving also stops any recording in progress.
+  useEffect(() => () => {
     stopStream()
     if (recorder.current && recorder.current.state !== 'inactive') {
       recorder.current.onstop = null
       recorder.current.stop()
     }
-    setText(''); setRec('idle'); setSeconds(0); setBlob(null)
-    setUrl((u) => { if (u) URL.revokeObjectURL(u); return null })
-  }
-
-  useEffect(() => { if (!open) reset() }, [open])
-  useEffect(() => () => stopStream(), [])
+  }, [])
+  useEffect(() => () => { if (url) URL.revokeObjectURL(url) }, [url])
 
   const start = async () => {
     try {
@@ -79,7 +84,7 @@ export function WriteBottle({ open, onClose, copy, onThrown }: { open: boolean; 
 
   const discardVoice = () => {
     setBlob(null)
-    setUrl((u) => { if (u) URL.revokeObjectURL(u); return null })
+    setUrl(null)
     setRec('idle'); setSeconds(0)
   }
 
@@ -105,7 +110,7 @@ export function WriteBottle({ open, onClose, copy, onThrown }: { open: boolean; 
   }
 
   return (
-    <Sheet open={open} onClose={onClose} title={copy.sea.writeTitle}>
+    <>
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value.slice(0, MAX))}
@@ -143,6 +148,6 @@ export function WriteBottle({ open, onClose, copy, onThrown }: { open: boolean; 
       >
         <Send className="h-4.5 w-4.5 -scale-x-100" /> {copy.sea.throwIt}
       </button>
-    </Sheet>
+    </>
   )
 }

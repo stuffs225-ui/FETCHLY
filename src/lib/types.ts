@@ -8,6 +8,8 @@ export const GENDERS: Record<Who, Gender> = { a: 'f', b: 'm' }
 export interface Profile {
   who: Who
   partner: Who
+  /** Present only until the other person has joined: the code they need for their first entry. */
+  invite?: string
 }
 
 export interface Bottle {
@@ -29,4 +31,34 @@ export interface DistanceInfo {
   precise: boolean
   at: { a: number | null; b: number | null }
   closestToday: number | null
+}
+
+export interface Song {
+  id: number
+  author: Who
+  ytId: string
+  title: string
+  channel: string | null
+  note: string | null
+  start: number
+  reaction: 'heart' | null
+  createdAt: number
+}
+
+/** Shared "listening together" session. `startAt` (server clock, ms) is when both phones begin. */
+export interface Listen {
+  status: 'invite' | 'playing'
+  host: Who
+  songId: number
+  ytId: string
+  title: string
+  startSec: number
+  createdAt: number
+  startAt?: number
+}
+
+export interface SongsInfo {
+  n: number
+  lastId: number
+  lastAuthor: Who | null
 }
